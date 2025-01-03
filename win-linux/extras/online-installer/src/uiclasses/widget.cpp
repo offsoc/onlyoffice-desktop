@@ -3,10 +3,15 @@
 #include "metrics.h"
 #include "palette.h"
 #include "drawningengine.h"
-#include <CommCtrl.h>
+#ifdef _WIN32
+# include <CommCtrl.h>
+#else
+
+#endif
 
 
 static bool isAllocOnHeap(void *addr) {
+#ifdef _WIN32
     if (HANDLE procHeap = GetProcessHeap()) {
         if (HeapLock(procHeap)) {
             bool res = false;
@@ -22,6 +27,28 @@ static bool isAllocOnHeap(void *addr) {
             return res;
         }
     }
+#else
+    if (FILE *maps = fopen("/proc/self/maps", "r")) {
+        char *line = NULL;
+        size_t line_size = 0;
+        uintptr_t start_address = 0, end_address = 0;
+        int name_start = 0, name_end = 0;
+        while (getline(&line, &line_size, maps) > 0) {
+            if (sscanf(line, "%lx-%lx %*s %*lx %*u:%*u %*lu %n%*[^\n]%n", &start_address, &end_address, &name_start, &name_end) == 2) {
+                if (name_end > name_start) {
+                    line[name_end] = '\0';
+                    if (strcmp(&line[name_start], "[heap]") == 0 && (uintptr_t)addr >= start_address && (uintptr_t)addr <= end_address) {
+                        free(line);
+                        fclose(maps);
+                        return true;
+                    }
+                }
+            }
+        }
+        free(line);
+        fclose(maps);
+    }
+#endif
     return false;
 }
 
@@ -30,7 +57,7 @@ Widget::Widget(Widget *parent) :
     Widget(parent, ObjectType::WidgetType)
 {}
 
-Widget::Widget(Widget *parent, HWND hwnd) :
+Widget::Widget(Widget *parent, WindowHandle hwnd) :
     Object(parent),
     DrawningSurface(),
     m_hWnd(hwnd),
@@ -41,11 +68,17 @@ Widget::Widget(Widget *parent, HWND hwnd) :
     m_is_class_destroyed(false),
     m_mouse_entered(false)
 {
+#ifdef _WIN32
     LONG style = ::GetWindowLong(m_hWnd, GWL_STYLE) | WS_CHILD;
     ::SetWindowLong(m_hWnd, GWL_STYLE, style);
+#else
+#endif
     m_properties[Properties::HSizeBehavior] = SizeBehavior::Expanding;
     m_properties[Properties::VSizeBehavior] = SizeBehavior::Expanding;
+#ifdef _WIN32
     SetParent(hwnd, parent->nativeWindowHandle());
+#else
+#endif
 }
 
 Widget::Widget(Widget *parent, ObjectType type, const Rect &rc) :
@@ -72,13 +105,21 @@ Widget::~Widget()
             delete m_layout;
         m_layout = nullptr;
     }
+#ifdef _WIN32
     if (!m_is_destroyed)
         DestroyWindow(m_hWnd);
+#else
+
+#endif
 }
 
 void Widget::setGeometry(int x, int y, int width, int height)
 {
+#ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, x, y, width, height, SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
+#else
+
+#endif
 }
 
 void Widget::setDisabled(bool disable)
@@ -90,17 +131,29 @@ void Widget::setDisabled(bool disable)
 
 void Widget::close()
 {
+#ifdef _WIN32
     PostMessage(m_hWnd, WM_CLOSE, 0, 0);
+#else
+
+#endif
 }
 
 void Widget::move(int x, int y)
 {
+#ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
+#else
+
+#endif
 }
 
 void Widget::resize(int w, int h)
 {
+#ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, 0, 0, w, h, SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
+#else
+
+#endif
 }
 
 Widget *Widget::parentWidget()
@@ -115,23 +168,35 @@ std::wstring Widget::title()
 
 Size Widget::size()
 {
+#ifdef _WIN32
     RECT rc;
     GetClientRect(m_hWnd, &rc);
     return Size(rc.right - rc.left, rc.bottom - rc.top);
+#else
+    return Size();
+#endif
 }
 
 void Widget::size(int *width, int *height)
 {
+#ifdef _WIN32
     RECT rc;
     GetClientRect(m_hWnd, &rc);
     *width = rc.right - rc.left;
     *height =  rc.bottom - rc.top;
+#else
+
+#endif
 }
 
 void Widget::setWindowTitle(const std::wstring &title)
 {
     m_title = title;
+#ifdef _WIN32
     SetWindowText(m_hWnd, title.c_str());
+#else
+
+#endif
 }
 
 void Widget::setProperty(Properties property, int val)
@@ -141,25 +206,41 @@ void Widget::setProperty(Properties property, int val)
 
 void Widget::show()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOW);
     UpdateWindow(m_hWnd);
+#else
+    gtk_widget_show(m_hWnd);
+#endif
 }
 
 void Widget::hide()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_HIDE);
+#else
+
+#endif
 }
 
 void Widget::repaint()
 {
+#ifdef _WIN32
     if (IsWindowVisible(m_hWnd))
         RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT | RDW_UPDATENOW);
+#else
+
+#endif
 }
 
 void Widget::update()
 {
+#ifdef _WIN32
     if (IsWindowVisible(m_hWnd))
         RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT);
+#else
+
+#endif
 }
 
 void Widget::setLayout(Layout *layout)
@@ -178,9 +259,13 @@ bool Widget::isCreated()
 
 bool Widget::underMouse()
 {
+#ifdef _WIN32
     POINT pt;
     GetCursorPos(&pt);
     return WindowFromPoint(pt) == m_hWnd;
+#else
+    return false;
+#endif
 }
 
 int Widget::property(Properties property)
@@ -193,12 +278,12 @@ Layout *Widget::layout()
     return m_layout;
 }
 
-HWND Widget::nativeWindowHandle()
+WindowHandle Widget::nativeWindowHandle()
 {
     return m_hWnd;
 }
 
-Widget *Widget::widgetFromHwnd(Widget *parent, HWND hwnd)
+Widget *Widget::widgetFromHwnd(Widget *parent, WindowHandle hwnd)
 {
     return new Widget(parent, hwnd);
 }
@@ -272,6 +357,7 @@ void Widget::disconnect(int connectionId)
     }
 }
 
+#ifdef _WIN32
 bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 {
     switch (msg) {
@@ -407,8 +493,14 @@ bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     }
     return false;
 }
+#else
+bool Widget::event()
+{
+    return false;
+}
+#endif
 
-void Widget::setNativeWindowHandle(HWND hWnd)
+void Widget::setNativeWindowHandle(WindowHandle hWnd)
 {
     m_hWnd = hWnd;
 }

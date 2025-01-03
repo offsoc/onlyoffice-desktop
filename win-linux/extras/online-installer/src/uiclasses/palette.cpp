@@ -1,4 +1,7 @@
 #include "palette.h"
+#ifdef __linux__
+# define RGB(r, g ,b) ((DWORD) (((BYTE) (r) | ((WORD) (g) << 8)) | (((DWORD) (BYTE) (b)) << 16)))
+#endif
 
 
 Palette::Palette()

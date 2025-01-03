@@ -1,7 +1,11 @@
 #include "application.h"
 #include "widget.h"
 #include "src/resource.h"
-#include <gdiplus.h>
+#ifdef _WIN32
+# include <gdiplus.h>
+#else
+
+#endif
 
 
 class Application::ApplicationPrivate
@@ -10,29 +14,43 @@ public:
     ApplicationPrivate();
     ~ApplicationPrivate();
 
+#ifdef _WIN32
     ULONG_PTR gdi_token;
     HINSTANCE hInstance;
-    LayoutDirection layoutDirection;
-    int windowId;
     ATOM registerClass(LPCWSTR className, HINSTANCE hInstance);
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#else
+    int exit_code;
+    void registerClass(Widget *wgt);
+#endif
+    LayoutDirection layoutDirection;
+    int windowId;
 };
 
 Application::ApplicationPrivate::ApplicationPrivate() :
+#ifdef _WIN32
     gdi_token(0),
     hInstance(nullptr),
+#else
+    exit_code(0),
+#endif
     layoutDirection(LayoutDirection::LeftToRight),
     windowId(0)
 {
+#ifdef _WIN32
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::GdiplusStartup(&gdi_token, &gdiplusStartupInput, nullptr);
+#endif
 }
 
 Application::ApplicationPrivate::~ApplicationPrivate()
 {
+#ifdef _WIN32
     Gdiplus::GdiplusShutdown(gdi_token);
+#endif
 }
 
+#ifdef _WIN32
 ATOM Application::ApplicationPrivate::registerClass(LPCWSTR className, HINSTANCE hInstance)
 {
     WNDCLASSEX wcx;
@@ -72,14 +90,30 @@ LRESULT CALLBACK Application::ApplicationPrivate::WndProc(HWND hWnd, UINT msg, W
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+#else
+
+void Application::ApplicationPrivate::registerClass(Widget *wgt)
+{
+
+}
+#endif
+
 Application *Application::inst = nullptr;
 
+#ifdef _WIN32
 Application::Application(HINSTANCE hInstance, PWSTR cmdline, int cmdshow) :
+#else
+Application::Application(int argc, char *argv[]) :
+#endif
     Application()
 {
+#ifdef _WIN32
     d_ptr->hInstance = hInstance;
     if (!d_ptr->hInstance)
         d_ptr->hInstance = GetModuleHandle(NULL);
+#else
+    gtk_init(&argc, &argv);
+#endif
     inst = this;
 }
 
@@ -95,10 +129,12 @@ Application *Application::instance()
     return inst;
 }
 
+#ifdef _WIN32
 HINSTANCE Application::moduleHandle()
 {
     return d_ptr->hInstance;
 }
+#endif
 
 void Application::setLayoutDirection(LayoutDirection layoutDirection)
 {
@@ -112,6 +148,7 @@ Application::~Application()
 
 int Application::exec()
 {
+#ifdef _WIN32
     MSG msg;
     BOOL res;
     while ((res = GetMessage(&msg, NULL, 0, 0)) != 0 && res != -1) {
@@ -119,15 +156,25 @@ int Application::exec()
         DispatchMessage(&msg);
     }
     return (int)msg.wParam;
+#else
+    gtk_main();
+    return d_ptr->exit_code;
+#endif
 }
 
 void Application::exit(int code)
 {
+#ifdef _WIN32
     PostQuitMessage(code);
+#else
+    d_ptr->exit_code = code;
+    gtk_main_quit();
+#endif
 }
 
 void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc)
 {
+#ifdef _WIN32
     std::wstring className;
     DWORD style = WS_CLIPCHILDREN;
     DWORD exStyle = d_ptr->layoutDirection == LayoutDirection::RightToLeft ? WS_EX_LAYOUTRTL : 0;
@@ -175,6 +222,42 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
         CreateWindowEx(exStyle, className.c_str(), wgt->title().c_str(), style, rc.x, rc.y, rc.width, rc.height,
                        hWndParent, NULL, d_ptr->hInstance, (LPVOID)wgt);
     // }
+#else
+    std::string className;
+    GtkWidget *gtkParent = wgt->parentWidget() ? wgt->parentWidget()->nativeWindowHandle() : nullptr;
+    GtkWidget *gtkWgt = nullptr;
+
+    switch (objType) {
+    case ObjectType::WindowType:
+        className = "MainWindow_" + std::to_string(++d_ptr->windowId);
+        gtkWgt = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+        break;
+
+    case ObjectType::DialogType:
+        className = "Dialog_" + std::to_string(++d_ptr->windowId);
+        gtkWgt = gtk_dialog_new();
+        break;
+
+    case ObjectType::PopupType:
+        className = "Popup_" + std::to_string(++d_ptr->windowId);
+        gtkWgt = gtk_window_new(GTK_WINDOW_POPUP);
+        break;
+
+    case ObjectType::WidgetType:
+    default:
+        className = "Widget_" + std::to_string(++d_ptr->windowId);
+        gtkWgt = gtk_drawing_area_new();
+        break;
+    }
+
+    wgt->setNativeWindowHandle(gtkWgt);
+    d_ptr->registerClass(wgt);
+    gtk_widget_set_name(gtkWgt, className.c_str());
+    if (d_ptr->layoutDirection == LayoutDirection::RightToLeft)
+        gtk_widget_set_direction(gtkWgt, GTK_TEXT_DIR_RTL);
+    if (gtkParent)
+        gtk_widget_set_parent(gtkWgt, gtkParent);
+#endif
 }
 
 

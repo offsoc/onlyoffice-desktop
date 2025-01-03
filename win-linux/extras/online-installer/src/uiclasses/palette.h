@@ -1,7 +1,15 @@
 #ifndef PALETTE_H
 #define PALETTE_H
 
-#include <Windows.h>
+#ifdef _WIN32
+# include <Windows.h>
+#else
+# include <cstdint>
+  typedef unsigned char BYTE;
+  typedef uint16_t WORD;
+  typedef uint32_t DWORD;
+  typedef DWORD COLORREF;
+#endif
 
 
 class Palette

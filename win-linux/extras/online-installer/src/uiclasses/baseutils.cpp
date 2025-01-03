@@ -1,9 +1,14 @@
 #include "baseutils.h"
 #include <string>
-#include <shlwapi.h>
-#include <sddl.h>
+#ifdef _WIN32
+# include <shlwapi.h>
+# include <sddl.h>
+#else
+
+#endif
 
 
+#ifdef _WIN32
 static int getLuma(COLORREF color)
 {
     return int(0.299 * GetRValue(color) + 0.587 * GetGValue(color) + 0.114 * GetBValue(color));
@@ -124,3 +129,6 @@ COLORREF Utils::getColorizationColor(bool isActive, COLORREF topColor)
 // {
 //     return int(0.299 * GetRValue(color) + 0.587 * GetGValue(color) + 0.114 * GetBValue(color)) < 128;
 // }
+#else
+
+#endif

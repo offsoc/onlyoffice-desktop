@@ -3,20 +3,29 @@
 
 #include "object.h"
 #include "common.h"
-#include <Windows.h>
-
+#ifdef _WIN32
+# include <Windows.h>
+#else
+# include <gtk/gtk.h>
+#endif
 
 class Widget;
 class Application : public Object
 {
 public:
+#ifdef _WIN32
     Application(HINSTANCE hInstance, PWSTR cmdline, int cmdshow);
+#else
+    Application(int argc, char *argv[]);
+#endif
     Application(const Application&) = delete;
     ~Application();
 
     Application& operator=(const Application&) = delete;
     static Application *instance();
+#ifdef _WIN32
     HINSTANCE moduleHandle();
+#endif
     void setLayoutDirection(LayoutDirection);
 
     int exec();

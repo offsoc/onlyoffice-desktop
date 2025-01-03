@@ -3,14 +3,19 @@
 #include "palette.h"
 #include "metrics.h"
 #include "drawningengine.h"
-#include <windowsx.h>
+#ifdef _WIN32
+# include <windowsx.h>
+#else
 
+#endif
+
+
+#ifdef _WIN32
 #define DCX_USESTYLE 0x00010000
 #define NC_AREA_WIDTH 3
 #define MAIN_WINDOW_BORDER_WIDTH 1
 
 using WinVer = Utils::WinVer;
-
 
 static BOOL CALLBACK EnumChildProc(_In_ HWND hwnd, _In_ LPARAM lParam)
 {
@@ -123,6 +128,45 @@ static bool isThemeActive()
     }
     return IsThemeActive ? (bool)IsThemeActive() : true;
 }
+#else
+#define WINDOW_CORNER_RADIUS 6
+
+
+void set_rounded_corners(GtkWidget *wgt, double rad)
+{
+    if (GdkWindow *gdk_window = gtk_widget_get_window(wgt)) {
+        int w = gtk_widget_get_allocated_width(wgt);
+        int h = gtk_widget_get_allocated_height(wgt);
+
+        cairo_surface_t *sfc = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+        cairo_t *cr = cairo_create(sfc);
+        cairo_set_source_rgba(cr, 1, 1, 1, 1);
+        cairo_move_to(cr, rad, 0);
+        // cairo_arc(cr, w - rad, rad, rad, -G_PI_2, 0);
+        // cairo_arc(cr, w - rad, h - rad, rad, 0, G_PI_2);
+        // cairo_arc(cr, rad, h - rad, rad, G_PI_2, G_PI);
+        // cairo_arc(cr, rad, rad, rad, G_PI, -G_PI_2);
+        cairo_arc(cr, w - rad, rad, rad, -G_PI_2, 0);
+        cairo_line_to(cr, w, h);
+        cairo_line_to(cr, 0, h);
+        cairo_line_to(cr, 0, rad);
+        cairo_arc(cr, rad, rad, rad, G_PI, -G_PI_2);
+        cairo_close_path(cr);
+        cairo_fill(cr);
+
+        cairo_surface_t *sfc_tgt = cairo_get_target(cr);
+        cairo_surface_flush(sfc_tgt);
+
+        cairo_region_t *mask = gdk_cairo_region_create_from_surface(sfc_tgt);
+        gdk_window_shape_combine_region(gdk_window, mask, 0, 0);
+
+        cairo_region_destroy(mask);
+        cairo_destroy(cr);
+        cairo_surface_destroy(sfc);
+    }
+}
+#endif
+
 
 Window::Window(Widget *parent, const Rect &rc) :
     Widget(parent, ObjectType::WindowType, rc),
@@ -136,6 +180,7 @@ Window::Window(Widget *parent, const Rect &rc) :
     m_init_size(rc.width, rc.height)
 {
     //setLayout(new BoxLayout(BoxLayout::Vertical));
+#ifdef _WIN32
     m_isThemeActive = isThemeActive();
     m_isTaskbarAutoHideOn = isTaskbarAutoHideOn();
     m_borderless = true;//isCustomWindowStyle();
@@ -155,6 +200,36 @@ Window::Window(Widget *parent, const Rect &rc) :
         m_brdColor = Utils::getColorizationColor(true, RGB(0xfe, 0xfe, 0xfe));
     }
     SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+#else
+    m_borderless = true;
+    gtk_window_set_type_hint(GTK_WINDOW(m_hWnd), GdkWindowTypeHint::GDK_WINDOW_TYPE_HINT_NORMAL);
+//    gtk_window_set_title(GTK_WINDOW(wnd), "GtkMainWindow");
+//    gtk_window_set_position(GTK_WINDOW(wnd), GtkWindowPosition::GTK_WIN_POS_CENTER);
+    gtk_widget_set_app_paintable(m_hWnd, TRUE);
+    GdkScreen *scr = gtk_widget_get_screen(m_hWnd);
+    if (GdkVisual *vis = gdk_screen_get_rgba_visual(scr))
+        gtk_widget_set_visual(m_hWnd, vis);
+
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider, "decoration {border-radius: 6px 6px 0px 0px;}", -1, NULL);
+    GtkStyleContext *context = gtk_widget_get_style_context(m_hWnd);
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(provider);
+
+    if (m_borderless) {
+        // if (QX11Info::isCompositingManagerRunning()) {
+            GtkWidget *header = gtk_header_bar_new();
+            gtk_window_set_titlebar(GTK_WINDOW(m_hWnd), header);
+            gtk_widget_destroy(header);
+        // } else {
+        //     is_support_round_corners = false;
+        //     gtk_window_set_decorated(GTK_WINDOW(m_hWnd), FALSE);
+        // }
+    } else {
+        // is_support_round_corners = false;
+    }
+    gtk_widget_realize(m_hWnd);
+#endif
 }
 
 Window::~Window()
@@ -171,64 +246,100 @@ void Window::setCentralWidget(Widget *wgt)
 void Window::setContentsMargins(int left, int top, int right, int bottom)
 {
     m_contentMargins = Margins(left, top, right, bottom);
+#ifdef _WIN32
     if (IsWindowVisible(m_hWnd))
         SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+#else
+
+#endif
 }
 
 void Window::setResizable(bool isResizable)
 {
     if (m_isResizable != isResizable) {
         m_isResizable = isResizable;
+#ifdef _WIN32
         LONG style = ::GetWindowLong(m_hWnd, GWL_STYLE);
         ::SetWindowLong(m_hWnd, GWL_STYLE, m_isResizable ? style | WS_MAXIMIZEBOX : style & ~WS_MAXIMIZEBOX);
+#else
+
+#endif
     }
 }
 
 void Window::showAll()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOW);
     UpdateWindow(m_hWnd);
     EnumChildWindows(m_hWnd, EnumChildProc, 0);
+#else
+    gtk_widget_show_all(m_hWnd);
+#endif
 }
 
 void Window::showNormal()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_RESTORE);
+#else
+
+#endif
 }
 
 void Window::showMinimized()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOWMINIMIZED);
+#else
+
+#endif
 }
 
 void Window::showMaximized()
 {
+#ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOWMAXIMIZED);
+#else
+
+#endif
 }
 
 void Window::setIcon(int id)
 {
+#ifdef _WIN32
     HMODULE hInstance = GetModuleHandle(NULL);
     HICON hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(id));
     SendMessage(m_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
     SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+#else
+
+#endif
 }
 
 bool Window::isMinimized()
 {
+#ifdef _WIN32
     WINDOWPLACEMENT wpl;
     wpl.length = sizeof(wpl);
     if (GetWindowPlacement(m_hWnd, &wpl))
         return wpl.showCmd == SW_SHOWMINIMIZED;
+#else
+
+#endif
     return false;
 }
 
 bool Window::isMaximized()
 {
+#ifdef _WIN32
     WINDOWPLACEMENT wpl;
     wpl.length = sizeof(wpl);
     if (GetWindowPlacement(m_hWnd, &wpl))
         return wpl.showCmd == SW_SHOWMAXIMIZED;
+#else
+
+#endif
     return false;
 }
 
@@ -250,6 +361,7 @@ void Window::disconnect(int connectionId)
         m_state_callbacks.erase(it);
 }
 
+#ifdef _WIN32
 bool Window::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 {
     switch (msg) {
@@ -546,3 +658,9 @@ bool Window::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     }
     return Widget::event(msg, wParam, lParam, result);
 }
+#else
+bool Window::event()
+{
+    return Widget::event();
+}
+#endif

@@ -2,38 +2,21 @@
 #include "drawingsurface.h"
 #include "palette.h"
 #include "metrics.h"
-#include <gdiplusheaders.h>
 
-
-static Gdiplus::Color ColorFromColorRef(COLORREF rgb)
-{
-    Gdiplus::Color color;
-    color.SetFromCOLORREF(rgb);
-    return color;
-}
-
-static void RoundedPath(Gdiplus::GraphicsPath &ph, int x, int y, int width, int height, int rad)
-{
-    ph.AddArc(x, y, rad * 2, rad * 2, 180, 90);
-    ph.AddLine(x + rad, y, x + width - rad, y);
-    ph.AddArc(x + width - rad * 2, y, rad * 2, rad * 2, 270, 90);
-    ph.AddLine(x + width, y + rad, x + width, y + height - rad);
-    ph.AddArc(x + width - rad * 2, y + height - rad * 2, rad * 2, rad * 2, 0, 90);
-    ph.AddLine(x + width - rad, y + height, x + rad, y + height);
-    ph.AddArc(x, y + height - rad * 2, rad * 2, rad * 2, 90, 90);
-    ph.AddLine(x, y + height - rad, x, y + rad);
-    ph.CloseFigure();
-}
 
 DrawingEngine::DrawingEngine() :
-    m_ds(nullptr),
-    m_ps(nullptr),
+    m_ds(nullptr)
+#ifdef _WIN32
+  , m_ps(nullptr),
     m_hwnd(nullptr),
     m_hdc(nullptr),
     m_memDC(nullptr),
     m_memBmp(nullptr),
     m_oldBmp(nullptr),
     m_graphics(nullptr)
+#else
+
+#endif
 {
 
 }
@@ -52,6 +35,27 @@ DrawingEngine::~DrawingEngine()
 DrawningSurface *DrawingEngine::surface()
 {
     return m_ds;
+}
+
+#ifdef _WIN32
+static Gdiplus::Color ColorFromColorRef(COLORREF rgb)
+{
+    Gdiplus::Color color;
+    color.SetFromCOLORREF(rgb);
+    return color;
+}
+
+static void RoundedPath(Gdiplus::GraphicsPath &ph, int x, int y, int width, int height, int rad)
+{
+    ph.AddArc(x, y, rad * 2, rad * 2, 180, 90);
+    ph.AddLine(x + rad, y, x + width - rad, y);
+    ph.AddArc(x + width - rad * 2, y, rad * 2, rad * 2, 270, 90);
+    ph.AddLine(x + width, y + rad, x + width, y + height - rad);
+    ph.AddArc(x + width - rad * 2, y + height - rad * 2, rad * 2, rad * 2, 0, 90);
+    ph.AddLine(x + width - rad, y + height, x + rad, y + height);
+    ph.AddArc(x, y + height - rad * 2, rad * 2, rad * 2, 90, 90);
+    ph.AddLine(x, y + height - rad, x, y + rad);
+    ph.CloseFigure();
 }
 
 void DrawingEngine::Begin(DrawningSurface *ds, HWND hwnd, RECT *rc)
@@ -573,3 +577,6 @@ void DrawingEngine::LayeredDrawText(RECT &rc, const std::wstring &text) const
 //     m_rc = nullptr;
 //     m_ds = nullptr;
 // }
+#else
+
+#endif

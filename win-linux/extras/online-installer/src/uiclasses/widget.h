@@ -6,8 +6,15 @@
 #include "layout.h"
 #include "commondefines.h"
 #include <unordered_map>
-#include <Windows.h>
-
+#ifdef _WIN32
+# include <Windows.h>
+  typedef HWND WindowHandle;
+#else
+# include <gtk/gtk.h>
+# define CW_USEDEFAULT 100
+  typedef unsigned char BYTE;
+  typedef GtkWidget* WindowHandle;
+#endif
 
 class Widget : public Object, public DrawningSurface
 {
@@ -47,8 +54,8 @@ public:
     bool underMouse();
     int  property(Properties);
     Layout* layout();
-    HWND nativeWindowHandle();
-    static Widget* widgetFromHwnd(Widget *parent, HWND);
+    WindowHandle nativeWindowHandle();
+    static Widget* widgetFromHwnd(Widget *parent, WindowHandle);
 
     /* callback */
     int onResize(const FnVoidIntInt &callback);
@@ -61,17 +68,21 @@ public:
 
 protected:
     friend class Application;
-    Widget(Widget *parent, HWND);
+    Widget(Widget *parent, WindowHandle);
     Widget(Widget *parent, ObjectType type, const Rect &rc = Rect(CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT));
+#ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*);
+#else
+    virtual bool event();
+#endif
 
-    HWND         m_hWnd;
+    WindowHandle m_hWnd;
     Layout      *m_layout;
     std::wstring m_title;
     bool         m_disabled;
 
 private:
-    void setNativeWindowHandle(HWND);
+    void setNativeWindowHandle(WindowHandle);
 
     int m_properties[PROPERTIES_COUNT];
     std::unordered_map<int, FnVoidIntInt> m_resize_callbacks,

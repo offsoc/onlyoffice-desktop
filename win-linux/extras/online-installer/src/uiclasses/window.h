@@ -2,6 +2,14 @@
 #define WINDOW_H
 
 #include "widget.h"
+#ifdef _WIN32
+#else
+# include <cstdint>
+  typedef unsigned char BYTE;
+  typedef uint16_t WORD;
+  typedef uint32_t DWORD;
+  typedef DWORD COLORREF;
+#endif
 
 #define DEFAULT_WINDOW_RECT Rect(100,100,1368,768)
 
@@ -41,8 +49,13 @@ public:
 
     virtual void disconnect(int) override;
 
-protected:
+protected:    
+#ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*) override;
+#else
+    virtual bool event() override;
+#endif
+
 
 private:
     Widget  *m_centralWidget;
