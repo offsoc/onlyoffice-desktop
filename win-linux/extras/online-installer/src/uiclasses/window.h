@@ -25,6 +25,7 @@ struct FRAME {
 };
 #endif
 
+class WindowPrivate;
 class Window : public Widget
 {
 public:
@@ -54,11 +55,11 @@ protected:
 #ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*) override;
 #else
-    virtual bool event(GdkEvent *ev) override;
+    virtual bool event(GdkEventType ev_type, void *param) override;
 #endif
 
-
 private:
+    WindowPrivate *pimpl;
     Widget  *m_centralWidget;
     Margins  m_contentMargins;
     COLORREF m_brdColor;

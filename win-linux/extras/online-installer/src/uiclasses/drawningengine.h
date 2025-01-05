@@ -7,6 +7,8 @@
 # include <gdiplus.h>
 #else
 # include <cstdint>
+# include <cairo.h>
+# include <common.h>
   // typedef unsigned char BYTE;
   // typedef uint16_t WORD;
   typedef uint32_t DWORD;
@@ -50,7 +52,10 @@ public:
     // void LayeredUpdate(BYTE alpha);
     // void LayeredEnd();
 #else
-
+    void Begin(DrawningSurface*, cairo_t*, Rect *rc);
+    void FillBackground() const;
+    void DrawRoundedRect();
+    void End();
 #endif
 
 
@@ -69,7 +74,8 @@ private:
     HBITMAP m_oldBmp;
     Gdiplus::Graphics *m_graphics;
 #else
-
+    Rect    *m_rc;
+    cairo_t *m_cr;
 #endif
 };
 

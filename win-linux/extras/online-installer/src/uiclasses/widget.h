@@ -75,7 +75,7 @@ protected:
 #ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*);
 #else
-    virtual bool event(GdkEvent *ev);
+    virtual bool event(GdkEventType ev_type, void *param);
 #endif
 
     WindowHandle m_hWnd;

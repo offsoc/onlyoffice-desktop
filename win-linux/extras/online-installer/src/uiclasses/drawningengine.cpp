@@ -2,12 +2,20 @@
 #include "drawingsurface.h"
 #include "palette.h"
 #include "metrics.h"
+#ifdef _WIN32
+#else
+# include <glib.h>
+# define GetRValue(rgb) ((double)((BYTE)(rgb))/255)
+# define GetGValue(rgb) ((double)((BYTE)(((WORD)(rgb)) >> 8))/255)
+# define GetBValue(rgb) ((double)((BYTE)((rgb) >> 16))/255)
+#endif
 
 
 DrawingEngine::DrawingEngine() :
     m_ds(nullptr)
 #ifdef _WIN32
-  , m_ps(nullptr),
+  , m_rc(nullptr),
+    m_ps(nullptr),
     m_hwnd(nullptr),
     m_hdc(nullptr),
     m_memDC(nullptr),
@@ -15,7 +23,8 @@ DrawingEngine::DrawingEngine() :
     m_oldBmp(nullptr),
     m_graphics(nullptr)
 #else
-
+  , m_rc(nullptr),
+    m_cr(nullptr)
 #endif
 {
 
@@ -578,5 +587,50 @@ void DrawingEngine::LayeredDrawText(RECT &rc, const std::wstring &text) const
 //     m_ds = nullptr;
 // }
 #else
+static void RoundedPath(cairo_t *cr, int x, int y, int w, int h, int rad)
+{
+    cairo_arc(cr, x + w - rad, y + rad, rad, -G_PI_2, 0);
+    cairo_arc(cr, x + w - rad, y + h - rad, rad, 0, G_PI_2);
+    cairo_arc(cr, x + rad, y + h - rad, rad, G_PI_2, G_PI);
+    cairo_arc(cr, x + rad, y + rad, rad, G_PI, -G_PI_2);
+    // cairo_move_to(cr, x + rad, y);
+    // cairo_arc(cr, x + w - rad, y + rad, rad, -G_PI_2, 0);
+    // cairo_line_to(cr, x + w, y + h);
+    // cairo_line_to(cr, x, y + h);
+    // cairo_line_to(cr, x, y + rad);
+    // cairo_arc(cr, x + rad, y + rad, rad, G_PI, -G_PI_2);
+    cairo_close_path(cr);
+    cairo_fill(cr);
+}
 
+void DrawingEngine::Begin(DrawningSurface *ds, cairo_t *cr, Rect *rc)
+{
+    if (m_ds) {
+        printf("Engine is buisy....\n");
+        fflush(stdout);
+        return;
+    }
+    m_ds = ds;
+    m_cr = cr;
+    m_rc = rc;
+}
+
+void DrawingEngine::FillBackground() const
+{
+    COLORREF rgb = m_ds->palette()->color(Palette::Background);
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+    RoundedPath(m_cr, m_rc->x, m_rc->y, m_rc->width, m_rc->height, m_ds->metrics()->value(Metrics::BorderRadius));
+}
+
+void DrawingEngine::DrawRoundedRect()
+{
+
+}
+
+void DrawingEngine::End()
+{
+    m_rc = nullptr;
+    m_cr = nullptr;
+    m_ds = nullptr;
+}
 #endif

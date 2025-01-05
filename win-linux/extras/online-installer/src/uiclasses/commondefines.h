@@ -10,7 +10,9 @@
 # define WM_MOUSEENTER (WM_APP + 1)
 # define WM_INVOKEMETHOD (WM_APP + 2)
 #else
-
+# include <gdk/gdk.h>
+# define GDK_DRAW_CUSTOM (GDK_EVENT_LAST + 1)
+# define GDK_DESTROY_CUSTOM (GDK_EVENT_LAST + 2)
 #endif
 
 typedef std::function<void(void)> FnVoidVoid;

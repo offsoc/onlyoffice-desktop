@@ -495,14 +495,25 @@ bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return false;
 }
 #else
-bool Widget::event(GdkEvent *ev)
+bool Widget::event(GdkEventType ev_type, void *param)
 {
-    switch (ev->type) {
-    case GDK_EXPOSE: {
+    switch (ev_type) {
+    case GDK_DRAW_CUSTOM: {
 
         break;
     }
+
     case GDK_DELETE: {
+        bool accept = true;
+        for (auto it = m_close_callbacks.begin(); it != m_close_callbacks.end(); it++)
+            if (it->second)
+                (it->second)(&accept);
+        if (accept)
+            gtk_widget_destroy(m_hWnd);
+        break;
+    }
+
+    case GDK_DESTROY_CUSTOM: {
         m_is_destroyed = true;
         for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end(); it++)
             if (it->second)

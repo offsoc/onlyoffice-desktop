@@ -108,14 +108,14 @@ int main(int argc, char *argv[])
     // int x = (scrWidth - WINDOW_SIZE.width) / 2;
     // int y = (scrHeight - WINDOW_SIZE.height) / 2;
     // MainWindow w(nullptr, Rect(x, y, WINDOW_SIZE.width, WINDOW_SIZE.height));
-    // w.onAboutToDestroy([&app]() {
-    //     app.exit(0);
-    // });
+    w.onAboutToDestroy([&app]() {
+        app.exit(0);
+    });
     // if (!app_installed)
     //     w.initInstallationMode(url_or_path);
     // else
     //     w.initControlMode(arch);
-    // w.showAll();
+    w.showAll();
     int exit_code = app.exec();
 #ifdef _WIN32
     CloseHandle(hMutex);

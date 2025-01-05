@@ -10,10 +10,44 @@
 #endif
 
 
+class WindowPrivate
+{
+public:
+    WindowPrivate();
+    ~WindowPrivate();
+
 #ifdef _WIN32
-#define DCX_USESTYLE 0x00010000
-#define NC_AREA_WIDTH 3
-#define MAIN_WINDOW_BORDER_WIDTH 1
+
+#else
+    guint state = 0;
+    // Point pos, normalPos;
+    Size size, normalSize;
+    bool is_maximized = false,
+        is_custom_style = false,
+        is_support_round_corners = true;
+#endif
+
+private:
+#ifdef __linux
+    static void set_rounded_corners(GtkWidget *wgt, double rad);
+#endif
+};
+
+WindowPrivate::WindowPrivate()
+{
+
+}
+
+WindowPrivate::~WindowPrivate()
+{
+
+}
+
+
+#ifdef _WIN32
+# define DCX_USESTYLE 0x00010000
+# define NC_AREA_WIDTH 3
+# define MAIN_WINDOW_BORDER_WIDTH 1
 
 using WinVer = Utils::WinVer;
 
@@ -129,10 +163,10 @@ static bool isThemeActive()
     return IsThemeActive ? (bool)IsThemeActive() : true;
 }
 #else
-#define WINDOW_CORNER_RADIUS 6
+# define WINDOW_CORNER_RADIUS 6
 
 
-void set_rounded_corners(GtkWidget *wgt, double rad)
+void WindowPrivate::set_rounded_corners(GtkWidget *wgt, double rad)
 {
     if (GdkWindow *gdk_window = gtk_widget_get_window(wgt)) {
         int w = gtk_widget_get_allocated_width(wgt);
@@ -170,6 +204,7 @@ void set_rounded_corners(GtkWidget *wgt, double rad)
 
 Window::Window(Widget *parent, const Rect &rc) :
     Widget(parent, ObjectType::WindowType, rc),
+    pimpl(new WindowPrivate),
     m_centralWidget(nullptr),
     m_contentMargins(0,0,0,0),
     m_resAreaWidth(0),
@@ -202,6 +237,7 @@ Window::Window(Widget *parent, const Rect &rc) :
     SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #else
     m_borderless = true;
+    metrics()->setMetrics(Metrics::BorderRadius, WINDOW_CORNER_RADIUS);
     gtk_window_set_type_hint(GTK_WINDOW(m_hWnd), GdkWindowTypeHint::GDK_WINDOW_TYPE_HINT_NORMAL);
 //    gtk_window_set_title(GTK_WINDOW(wnd), "GtkMainWindow");
 //    gtk_window_set_position(GTK_WINDOW(wnd), GtkWindowPosition::GTK_WIN_POS_CENTER);
@@ -210,8 +246,11 @@ Window::Window(Widget *parent, const Rect &rc) :
     if (GdkVisual *vis = gdk_screen_get_rgba_visual(scr))
         gtk_widget_set_visual(m_hWnd, vis);
 
+    char style[256];
+    snprintf(style, sizeof(style), "decoration {border-radius: %dpx %dpx %dpx %dpx;}",
+                 WINDOW_CORNER_RADIUS, WINDOW_CORNER_RADIUS, WINDOW_CORNER_RADIUS, WINDOW_CORNER_RADIUS);
     GtkCssProvider *provider = gtk_css_provider_new();
-    gtk_css_provider_load_from_data(provider, "decoration {border-radius: 6px 6px 0px 0px;}", -1, NULL);
+    gtk_css_provider_load_from_data(provider, style, -1, NULL);
     GtkStyleContext *context = gtk_widget_get_style_context(m_hWnd);
     gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_unref(provider);
@@ -222,13 +261,13 @@ Window::Window(Widget *parent, const Rect &rc) :
             gtk_window_set_titlebar(GTK_WINDOW(m_hWnd), header);
             gtk_widget_destroy(header);
         } else {
-            // is_support_round_corners = false;
+            pimpl->is_support_round_corners = false;
             gtk_window_set_decorated(GTK_WINDOW(m_hWnd), FALSE);
         }
     } else {
-        // is_support_round_corners = false;
+        pimpl->is_support_round_corners = false;
     }
-    // gtk_widget_realize(m_hWnd);
+    gtk_widget_realize(m_hWnd);
 #endif
 }
 
@@ -236,6 +275,7 @@ Window::~Window()
 {
     //if (m_layout)
     //    delete m_layout, m_layout = nullptr;
+    delete pimpl, pimpl = nullptr;
 }
 
 void Window::setCentralWidget(Widget *wgt)
@@ -659,8 +699,28 @@ bool Window::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return Widget::event(msg, wParam, lParam, result);
 }
 #else
-bool Window::event(GdkEvent *ev)
+bool Window::event(GdkEventType ev_type, void *param)
 {
-    return Widget::event(ev);
+    switch (ev_type) {
+    case GDK_DRAW_CUSTOM: {
+        int x = 0, y = 0, w = 0, h = 0;
+        GdkRectangle grc{0, 0, 0, 0};
+        GdkWindow *gdk_wnd = gtk_widget_get_window(m_hWnd);
+        gdk_window_get_frame_extents(gdk_wnd, &grc);
+        gtk_window_get_size(GTK_WINDOW(m_hWnd), &w, &h);
+        gtk_window_get_position(GTK_WINDOW(m_hWnd), &x, &y);
+        x -= grc.x;
+        y -= grc.y;
+        Rect rc(x, y, w, h);
+        engine()->Begin(this, (cairo_t*)param, &rc);
+        engine()->FillBackground();
+        engine()->End();
+        return false;
+    }
+
+    default:
+        break;
+    }
+    return Widget::event(ev_type, param);
 }
 #endif

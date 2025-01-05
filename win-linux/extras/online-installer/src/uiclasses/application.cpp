@@ -22,7 +22,9 @@ public:
 #else
     int exit_code;
     void registerClass(Widget *wgt);
-    static gboolean WndProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
+    static gboolean EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
+    static gboolean DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data);
+    static void DestroyProc(GtkWidget *wgt, gpointer data);
 #endif
     LayoutDirection layoutDirection;
     int windowId;
@@ -95,17 +97,33 @@ LRESULT CALLBACK Application::ApplicationPrivate::WndProc(HWND hWnd, UINT msg, W
 
 void Application::ApplicationPrivate::registerClass(Widget *wgt)
 {
-    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(WndProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(EventProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "draw", G_CALLBACK(DrawProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "destroy", G_CALLBACK(DestroyProc), wgt);
 }
 
-gboolean Application::ApplicationPrivate::WndProc(GtkWidget *wgt, GdkEvent *ev, gpointer data)
+gboolean Application::ApplicationPrivate::EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data)
 {
     if (Widget *w = (Widget*)data) {
-        return w->event(ev);
+        return w->event(ev->type, NULL);
     }
     return FALSE;
 }
 
+gboolean Application::ApplicationPrivate::DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        return w->event((GdkEventType)GDK_DRAW_CUSTOM, cr);
+    }
+    return FALSE;
+}
+
+void Application::ApplicationPrivate::DestroyProc(GtkWidget *wgt, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        w->event((GdkEventType)GDK_DESTROY_CUSTOM, NULL);
+    }
+}
 #endif
 
 Application *Application::inst = nullptr;
