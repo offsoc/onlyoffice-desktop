@@ -217,18 +217,18 @@ Window::Window(Widget *parent, const Rect &rc) :
     g_object_unref(provider);
 
     if (m_borderless) {
-        // if (QX11Info::isCompositingManagerRunning()) {
+        if (gdk_screen_is_composited(scr)) {
             GtkWidget *header = gtk_header_bar_new();
             gtk_window_set_titlebar(GTK_WINDOW(m_hWnd), header);
             gtk_widget_destroy(header);
-        // } else {
-        //     is_support_round_corners = false;
-        //     gtk_window_set_decorated(GTK_WINDOW(m_hWnd), FALSE);
-        // }
+        } else {
+            // is_support_round_corners = false;
+            gtk_window_set_decorated(GTK_WINDOW(m_hWnd), FALSE);
+        }
     } else {
         // is_support_round_corners = false;
     }
-    gtk_widget_realize(m_hWnd);
+    // gtk_widget_realize(m_hWnd);
 #endif
 }
 
@@ -659,8 +659,8 @@ bool Window::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return Widget::event(msg, wParam, lParam, result);
 }
 #else
-bool Window::event()
+bool Window::event(GdkEvent *ev)
 {
-    return Widget::event();
+    return Widget::event(ev);
 }
 #endif

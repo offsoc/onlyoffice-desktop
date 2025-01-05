@@ -161,7 +161,7 @@ Widget *Widget::parentWidget()
     return dynamic_cast<Widget*>(parent());
 }
 
-std::wstring Widget::title()
+tstring Widget::title()
 {
     return m_title;
 }
@@ -189,13 +189,13 @@ void Widget::size(int *width, int *height)
 #endif
 }
 
-void Widget::setWindowTitle(const std::wstring &title)
+void Widget::setWindowTitle(const tstring &title)
 {
     m_title = title;
 #ifdef _WIN32
     SetWindowText(m_hWnd, title.c_str());
 #else
-
+    gtk_window_set_title(GTK_WINDOW(m_hWnd), title.c_str());
 #endif
 }
 
@@ -229,7 +229,8 @@ void Widget::repaint()
     if (IsWindowVisible(m_hWnd))
         RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT | RDW_UPDATENOW);
 #else
-
+    gtk_widget_queue_draw(m_hWnd);
+    gdk_window_process_all_updates();
 #endif
 }
 
@@ -239,7 +240,7 @@ void Widget::update()
     if (IsWindowVisible(m_hWnd))
         RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT);
 #else
-
+    gtk_widget_queue_draw(m_hWnd);
 #endif
 }
 
@@ -494,8 +495,30 @@ bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return false;
 }
 #else
-bool Widget::event()
+bool Widget::event(GdkEvent *ev)
 {
+    switch (ev->type) {
+    case GDK_EXPOSE: {
+
+        break;
+    }
+    case GDK_DELETE: {
+        m_is_destroyed = true;
+        for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end(); it++)
+            if (it->second)
+                (it->second)();
+
+        if (!m_is_class_destroyed) {
+            if (isAllocOnHeap(this)) {
+                delete this;
+            }
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
     return false;
 }
 #endif

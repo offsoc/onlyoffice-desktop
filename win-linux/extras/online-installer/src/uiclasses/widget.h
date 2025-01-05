@@ -8,10 +8,12 @@
 #include <unordered_map>
 #ifdef _WIN32
 # include <Windows.h>
+# define tstring std::wstring
   typedef HWND WindowHandle;
 #else
 # include <gtk/gtk.h>
 # define CW_USEDEFAULT 100
+# define tstring std::string
   typedef unsigned char BYTE;
   typedef GtkWidget* WindowHandle;
 #endif
@@ -40,10 +42,10 @@ public:
     void move(int, int);
     void resize(int, int);
     Widget* parentWidget();
-    std::wstring title();
+    tstring title();
     Size size();
     void size(int*, int*);
-    void setWindowTitle(const std::wstring &title);
+    void setWindowTitle(const tstring &title);
     void setProperty(Properties, int);
     void show();
     void hide();
@@ -73,12 +75,12 @@ protected:
 #ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*);
 #else
-    virtual bool event();
+    virtual bool event(GdkEvent *ev);
 #endif
 
     WindowHandle m_hWnd;
     Layout      *m_layout;
-    std::wstring m_title;
+    tstring      m_title;
     bool         m_disabled;
 
 private:

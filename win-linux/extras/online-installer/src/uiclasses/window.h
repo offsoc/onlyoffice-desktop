@@ -13,7 +13,7 @@
 
 #define DEFAULT_WINDOW_RECT Rect(100,100,1368,768)
 
-
+#ifdef _WIN32
 struct FRAME {
     FRAME() : left(0), top(0)
     {}
@@ -23,6 +23,7 @@ struct FRAME {
     }
     int left, top;
 };
+#endif
 
 class Window : public Widget
 {
@@ -53,7 +54,7 @@ protected:
 #ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*) override;
 #else
-    virtual bool event() override;
+    virtual bool event(GdkEvent *ev) override;
 #endif
 
 
@@ -64,13 +65,17 @@ private:
     int      m_brdWidth,
              m_resAreaWidth,
              m_state;
+#ifdef _WIN32
     double   m_dpi;
     FRAME    m_frame;
+#endif
     bool     m_borderless,
              m_isResizable,
              m_isMaximized,
+#ifdef _WIN32
              m_isThemeActive,
              m_isTaskbarAutoHideOn,
+#endif
              m_scaleChanged;
     Size     m_init_size;
 

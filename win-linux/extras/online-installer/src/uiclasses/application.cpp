@@ -22,6 +22,7 @@ public:
 #else
     int exit_code;
     void registerClass(Widget *wgt);
+    static gboolean WndProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
 #endif
     LayoutDirection layoutDirection;
     int windowId;
@@ -94,8 +95,17 @@ LRESULT CALLBACK Application::ApplicationPrivate::WndProc(HWND hWnd, UINT msg, W
 
 void Application::ApplicationPrivate::registerClass(Widget *wgt)
 {
-
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(WndProc), wgt);
 }
+
+gboolean Application::ApplicationPrivate::WndProc(GtkWidget *wgt, GdkEvent *ev, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        return w->event(ev);
+    }
+    return FALSE;
+}
+
 #endif
 
 Application *Application::inst = nullptr;
@@ -231,6 +241,8 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
     case ObjectType::WindowType:
         className = "MainWindow_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+        gtk_window_resize(GTK_WINDOW(gtkWgt), rc.width, rc.height);
+        gtk_window_move(GTK_WINDOW(gtkWgt), rc.x, rc.y);
         break;
 
     case ObjectType::DialogType:
