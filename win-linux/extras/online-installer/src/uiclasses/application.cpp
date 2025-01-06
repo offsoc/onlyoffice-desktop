@@ -23,6 +23,7 @@ public:
     int exit_code;
     void registerClass(Widget *wgt);
     static gboolean EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
+    static void EventAfterProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
     static gboolean DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data);
     static void DestroyProc(GtkWidget *wgt, gpointer data);
 #endif
@@ -98,6 +99,7 @@ LRESULT CALLBACK Application::ApplicationPrivate::WndProc(HWND hWnd, UINT msg, W
 void Application::ApplicationPrivate::registerClass(Widget *wgt)
 {
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(EventProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event-after", G_CALLBACK(EventAfterProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "draw", G_CALLBACK(DrawProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "destroy", G_CALLBACK(DestroyProc), wgt);
 }
@@ -108,6 +110,28 @@ gboolean Application::ApplicationPrivate::EventProc(GtkWidget *wgt, GdkEvent *ev
         return w->event(ev->type, NULL);
     }
     return FALSE;
+}
+
+void Application::ApplicationPrivate::EventAfterProc(GtkWidget *wgt, GdkEvent *ev, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        switch (ev->type) {
+        case GDK_CONFIGURE: {
+            w->event((GdkEventType)GDK_CONFIGURE_AFTER, NULL);
+            break;
+        }
+        case GDK_FOCUS_CHANGE: {
+            w->event((GdkEventType)GDK_FOCUS_CHANGE_AFTER, (void*)ev);
+            break;
+        }
+        case GDK_WINDOW_STATE: {
+            w->event((GdkEventType)GDK_WINDOW_STATE_AFTER, (void*)ev);
+            break;
+        }
+        default:
+            break;
+        }
+    }
 }
 
 gboolean Application::ApplicationPrivate::DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data)
@@ -266,17 +290,23 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
     case ObjectType::DialogType:
         className = "Dialog_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_dialog_new();
+        gtk_window_resize(GTK_WINDOW(gtkWgt), rc.width, rc.height);
+        gtk_window_move(GTK_WINDOW(gtkWgt), rc.x, rc.y);
         break;
 
     case ObjectType::PopupType:
         className = "Popup_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_window_new(GTK_WINDOW_POPUP);
+        gtk_window_resize(GTK_WINDOW(gtkWgt), rc.width, rc.height);
+        gtk_window_move(GTK_WINDOW(gtkWgt), rc.x, rc.y);
         break;
 
     case ObjectType::WidgetType:
     default:
         className = "Widget_" + std::to_string(++d_ptr->windowId);
-        gtkWgt = gtk_drawing_area_new();
+        gtkWgt = gtk_layout_new(NULL, NULL);
+        gtk_widget_set_size_request(gtkWgt, rc.width, rc.height);
+        // gtk_widget_add_events(gtkWgt, gtk_widget_get_events(gtkWgt) | GDK_EXPOSURE_MASK);
         break;
     }
 
@@ -286,7 +316,8 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
     if (d_ptr->layoutDirection == LayoutDirection::RightToLeft)
         gtk_widget_set_direction(gtkWgt, GTK_TEXT_DIR_RTL);
     if (gtkParent)
-        gtk_widget_set_parent(gtkWgt, gtkParent);
+        gtk_layout_put((GtkLayout*)wgt->parentWidget()->gtkLayout(), gtkWgt, rc.x, rc.y);
+        // gtk_widget_set_parent(gtkWgt, gtkParent);
 #endif
 }
 

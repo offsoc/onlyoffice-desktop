@@ -32,6 +32,11 @@ public:
     Window(Widget *parent = nullptr, const Rect &rc = DEFAULT_WINDOW_RECT);
     virtual ~Window();
 
+#ifdef __linux
+    virtual void setGeometry(int, int, int, int) override;
+    virtual void move(int, int) override;
+    virtual void resize(int, int) override;
+#endif
     void setCentralWidget(Widget*);
     void setContentsMargins(int, int, int, int);
     void setResizable(bool);
@@ -59,6 +64,10 @@ protected:
 #endif
 
 private:
+#ifdef __linux
+    virtual GtkWidget *gtkLayout() override;
+#endif
+
     WindowPrivate *pimpl;
     Widget  *m_centralWidget;
     Margins  m_contentMargins;
@@ -69,6 +78,8 @@ private:
 #ifdef _WIN32
     double   m_dpi;
     FRAME    m_frame;
+#else
+    GtkWidget *m_gtk_layout;
 #endif
     bool     m_borderless,
              m_isResizable,

@@ -267,6 +267,10 @@ Window::Window(Widget *parent, const Rect &rc) :
     } else {
         pimpl->is_support_round_corners = false;
     }
+#ifdef __linux
+    m_gtk_layout = gtk_layout_new(NULL, NULL);
+    gtk_container_add(GTK_CONTAINER(m_hWnd), m_gtk_layout);
+#endif
     gtk_widget_realize(m_hWnd);
 #endif
 }
@@ -277,6 +281,27 @@ Window::~Window()
     //    delete m_layout, m_layout = nullptr;
     delete pimpl, pimpl = nullptr;
 }
+
+#ifdef __linux
+void Window::setGeometry(int x, int y, int w, int h)
+{
+    gtk_window_resize(GTK_WINDOW(m_hWnd), w, h);
+    gtk_window_move(GTK_WINDOW(m_hWnd), x, y);
+    gdk_window_process_all_updates();
+}
+
+void Window::move(int x, int y)
+{
+    gtk_window_move(GTK_WINDOW(m_hWnd), x, y);
+    gdk_window_process_all_updates();
+}
+
+void Window::resize(int w, int h)
+{
+    gtk_window_resize(GTK_WINDOW(m_hWnd), w, h);
+    gdk_window_process_all_updates();
+}
+#endif
 
 void Window::setCentralWidget(Widget *wgt)
 {
@@ -712,9 +737,24 @@ bool Window::event(GdkEventType ev_type, void *param)
         x -= grc.x;
         y -= grc.y;
         Rect rc(x, y, w, h);
+        metrics()->setMetrics(Metrics::BorderRadius, pimpl->is_maximized ? 0 : WINDOW_CORNER_RADIUS);
+
         engine()->Begin(this, (cairo_t*)param, &rc);
         engine()->FillBackground();
         engine()->End();
+        return false;
+    }
+
+    case GDK_WINDOW_STATE_AFTER: {
+        GdkEvent *ev = (GdkEvent*)param;
+        guint state = guint(ev->window_state.new_window_state) & (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED | GDK_WINDOW_STATE_FULLSCREEN);
+        if (pimpl->state != state) {
+            pimpl->state = state;
+            pimpl->is_maximized = state & GDK_WINDOW_STATE_MAXIMIZED;
+            for (auto it = m_state_callbacks.begin(); it != m_state_callbacks.end(); it++)
+                if (it->second)
+                    (it->second)(pimpl->state);
+        }
         return false;
     }
 
@@ -722,5 +762,10 @@ bool Window::event(GdkEventType ev_type, void *param)
         break;
     }
     return Widget::event(ev_type, param);
+}
+
+GtkWidget* Window::gtkLayout()
+{
+    return m_gtk_layout;
 }
 #endif

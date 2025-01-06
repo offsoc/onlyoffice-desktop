@@ -78,6 +78,8 @@ Widget::Widget(Widget *parent, WindowHandle hwnd) :
 #ifdef _WIN32
     SetParent(hwnd, parent->nativeWindowHandle());
 #else
+    if (parent)
+        gtk_layout_put((GtkLayout*)parent->gtkLayout(), m_hWnd, 0, 0);
 #endif
 }
 
@@ -118,7 +120,30 @@ void Widget::setGeometry(int x, int y, int width, int height)
 #ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, x, y, width, height, SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
 #else
+    gtk_widget_set_size_request(m_hWnd, width, height);
+    if (parentWidget()) {
+        gtk_layout_move((GtkLayout*)parentWidget()->gtkLayout(), m_hWnd, x, y);
+    }
+#endif
+}
 
+void Widget::move(int x, int y)
+{
+#ifdef _WIN32
+    SetWindowPos(m_hWnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
+#else
+    if (parentWidget()) {
+        gtk_layout_move((GtkLayout*)parentWidget()->gtkLayout(), m_hWnd, x, y);
+    }
+#endif
+}
+
+void Widget::resize(int w, int h)
+{
+#ifdef _WIN32
+    SetWindowPos(m_hWnd, NULL, 0, 0, w, h, SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
+#else
+    gtk_widget_set_size_request(m_hWnd, w, h);
 #endif
 }
 
@@ -133,24 +158,6 @@ void Widget::close()
 {
 #ifdef _WIN32
     PostMessage(m_hWnd, WM_CLOSE, 0, 0);
-#else
-
-#endif
-}
-
-void Widget::move(int x, int y)
-{
-#ifdef _WIN32
-    SetWindowPos(m_hWnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
-#else
-
-#endif
-}
-
-void Widget::resize(int w, int h)
-{
-#ifdef _WIN32
-    SetWindowPos(m_hWnd, NULL, 0, 0, w, h, SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
 #else
 
 #endif
@@ -219,7 +226,7 @@ void Widget::hide()
 #ifdef _WIN32
     ShowWindow(m_hWnd, SW_HIDE);
 #else
-
+    gtk_widget_hide(m_hWnd);
 #endif
 }
 
@@ -499,8 +506,13 @@ bool Widget::event(GdkEventType ev_type, void *param)
 {
     switch (ev_type) {
     case GDK_DRAW_CUSTOM: {
-
-        break;
+        int w = 0, h = 0;
+        gtk_widget_get_size_request(m_hWnd, &w, &h);
+        Rect rc(0, 0, w, h);
+        engine()->Begin(this, (cairo_t*)param, &rc);
+        engine()->FillBackground();
+        engine()->End();
+        return false;
     }
 
     case GDK_DELETE: {
@@ -508,9 +520,7 @@ bool Widget::event(GdkEventType ev_type, void *param)
         for (auto it = m_close_callbacks.begin(); it != m_close_callbacks.end(); it++)
             if (it->second)
                 (it->second)(&accept);
-        if (accept)
-            gtk_widget_destroy(m_hWnd);
-        break;
+        return !accept;
     }
 
     case GDK_DESTROY_CUSTOM: {
@@ -531,6 +541,11 @@ bool Widget::event(GdkEventType ev_type, void *param)
         break;
     }
     return false;
+}
+
+GtkWidget* Widget::gtkLayout()
+{
+    return m_hWnd;
 }
 #endif
 

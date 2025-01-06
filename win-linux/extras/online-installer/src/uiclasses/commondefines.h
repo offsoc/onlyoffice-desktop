@@ -13,6 +13,9 @@
 # include <gdk/gdk.h>
 # define GDK_DRAW_CUSTOM (GDK_EVENT_LAST + 1)
 # define GDK_DESTROY_CUSTOM (GDK_EVENT_LAST + 2)
+# define GDK_CONFIGURE_AFTER (GDK_EVENT_LAST + 3)
+# define GDK_FOCUS_CHANGE_AFTER (GDK_EVENT_LAST + 4)
+# define GDK_WINDOW_STATE_AFTER (GDK_EVENT_LAST + 5)
 #endif
 
 typedef std::function<void(void)> FnVoidVoid;

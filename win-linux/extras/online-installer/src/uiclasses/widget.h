@@ -37,10 +37,10 @@ public:
     };
 
     virtual void setGeometry(int, int, int, int);
+    virtual void move(int, int);
+    virtual void resize(int, int);
     void setDisabled(bool);
     void close();
-    void move(int, int);
-    void resize(int, int);
     Widget* parentWidget();
     tstring title();
     Size size();
@@ -84,6 +84,10 @@ protected:
     bool         m_disabled;
 
 private:
+#ifdef __linux
+    friend class Widget;
+    virtual GtkWidget *gtkLayout();
+#endif
     void setNativeWindowHandle(WindowHandle);
 
     int m_properties[PROPERTIES_COUNT];
