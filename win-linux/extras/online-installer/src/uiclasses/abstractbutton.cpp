@@ -33,6 +33,7 @@ void AbstractButton::disconnect(int connectionId)
         m_click_callbacks.erase(it);
 }
 
+#ifdef _WIN32
 bool AbstractButton::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 {
     switch (msg) {
@@ -74,6 +75,17 @@ bool AbstractButton::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *resu
     }
     return Widget::event(msg, wParam, lParam, result);
 }
+#else
+bool AbstractButton::event(GdkEventType ev_type, void *param)
+{
+    switch (ev_type) {
+
+    default:
+        break;
+    }
+    return Widget::event(ev_type, param);
+}
+#endif
 
 void AbstractButton::click()
 {

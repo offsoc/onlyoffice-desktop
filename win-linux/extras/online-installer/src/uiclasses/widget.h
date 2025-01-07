@@ -87,6 +87,7 @@ private:
 #ifdef __linux
     friend class Widget;
     virtual GtkWidget *gtkLayout();
+    Size m_size;
 #endif
     void setNativeWindowHandle(WindowHandle);
 

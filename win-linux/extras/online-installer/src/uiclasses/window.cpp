@@ -19,18 +19,17 @@ public:
 #ifdef _WIN32
 
 #else
+    static void set_rounded_corners(GtkWidget *wgt, double rad);
+
     guint state = 0;
-    // Point pos, normalPos;
+    Point pos, normalPos;
     Size size, normalSize;
     bool is_maximized = false,
         is_custom_style = false,
-        is_support_round_corners = true;
+        is_support_round_corners = true;    
 #endif
 
 private:
-#ifdef __linux
-    static void set_rounded_corners(GtkWidget *wgt, double rad);
-#endif
 };
 
 WindowPrivate::WindowPrivate()
@@ -163,23 +162,23 @@ static bool isThemeActive()
     return IsThemeActive ? (bool)IsThemeActive() : true;
 }
 #else
-# define WINDOW_CORNER_RADIUS 6
+# define WINDOW_CORNER_RADIUS 8
 
 
 void WindowPrivate::set_rounded_corners(GtkWidget *wgt, double rad)
 {
-    if (GdkWindow *gdk_window = gtk_widget_get_window(wgt)) {
+    if (GdkWindow *gdk_window = gtk_layout_get_bin_window(GTK_LAYOUT(wgt))) {
         int w = gtk_widget_get_allocated_width(wgt);
         int h = gtk_widget_get_allocated_height(wgt);
 
         cairo_surface_t *sfc = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
         cairo_t *cr = cairo_create(sfc);
         cairo_set_source_rgba(cr, 1, 1, 1, 1);
-        cairo_move_to(cr, rad, 0);
         // cairo_arc(cr, w - rad, rad, rad, -G_PI_2, 0);
         // cairo_arc(cr, w - rad, h - rad, rad, 0, G_PI_2);
         // cairo_arc(cr, rad, h - rad, rad, G_PI_2, G_PI);
         // cairo_arc(cr, rad, rad, rad, G_PI, -G_PI_2);
+        cairo_move_to(cr, rad, 0);
         cairo_arc(cr, w - rad, rad, rad, -G_PI_2, 0);
         cairo_line_to(cr, w, h);
         cairo_line_to(cr, 0, h);
@@ -237,7 +236,6 @@ Window::Window(Widget *parent, const Rect &rc) :
     SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #else
     m_borderless = true;
-    metrics()->setMetrics(Metrics::BorderRadius, WINDOW_CORNER_RADIUS);
     gtk_window_set_type_hint(GTK_WINDOW(m_hWnd), GdkWindowTypeHint::GDK_WINDOW_TYPE_HINT_NORMAL);
 //    gtk_window_set_title(GTK_WINDOW(wnd), "GtkMainWindow");
 //    gtk_window_set_position(GTK_WINDOW(wnd), GtkWindowPosition::GTK_WIN_POS_CENTER);
@@ -257,6 +255,7 @@ Window::Window(Widget *parent, const Rect &rc) :
 
     if (m_borderless) {
         if (gdk_screen_is_composited(scr)) {
+            metrics()->setMetrics(Metrics::BorderRadius, WINDOW_CORNER_RADIUS);
             GtkWidget *header = gtk_header_bar_new();
             gtk_window_set_titlebar(GTK_WINDOW(m_hWnd), header);
             gtk_widget_destroy(header);
@@ -267,10 +266,9 @@ Window::Window(Widget *parent, const Rect &rc) :
     } else {
         pimpl->is_support_round_corners = false;
     }
-#ifdef __linux
+
     m_gtk_layout = gtk_layout_new(NULL, NULL);
     gtk_container_add(GTK_CONTAINER(m_hWnd), m_gtk_layout);
-#endif
     gtk_widget_realize(m_hWnd);
 #endif
 }
@@ -315,7 +313,7 @@ void Window::setContentsMargins(int left, int top, int right, int bottom)
     if (IsWindowVisible(m_hWnd))
         SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #else
-
+    gtk_widget_queue_resize(m_hWnd);
 #endif
 }
 
@@ -327,7 +325,7 @@ void Window::setResizable(bool isResizable)
         LONG style = ::GetWindowLong(m_hWnd, GWL_STYLE);
         ::SetWindowLong(m_hWnd, GWL_STYLE, m_isResizable ? style | WS_MAXIMIZEBOX : style & ~WS_MAXIMIZEBOX);
 #else
-
+        gtk_window_set_resizable(GTK_WINDOW(m_hWnd), isResizable);
 #endif
     }
 }
@@ -348,7 +346,9 @@ void Window::showNormal()
 #ifdef _WIN32
     ShowWindow(m_hWnd, SW_RESTORE);
 #else
-
+    if (gtk_window_is_maximized(GTK_WINDOW(m_hWnd)))
+        gtk_window_unmaximize(GTK_WINDOW(m_hWnd));
+    gtk_window_present(GTK_WINDOW(m_hWnd));
 #endif
 }
 
@@ -357,7 +357,7 @@ void Window::showMinimized()
 #ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOWMINIMIZED);
 #else
-
+    gtk_window_iconify(GTK_WINDOW(m_hWnd));
 #endif
 }
 
@@ -366,21 +366,27 @@ void Window::showMaximized()
 #ifdef _WIN32
     ShowWindow(m_hWnd, SW_SHOWMAXIMIZED);
 #else
-
+    gtk_window_maximize(GTK_WINDOW(m_hWnd));
 #endif
 }
 
+#ifdef _WIN32
 void Window::setIcon(int id)
 {
-#ifdef _WIN32
     HMODULE hInstance = GetModuleHandle(NULL);
     HICON hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(id));
     SendMessage(m_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
     SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-#else
-
-#endif
 }
+#else
+void Window::setIcon(const char *path)
+{
+    if (GdkPixbuf *pb = gdk_pixbuf_new_from_resource_at_scale(path, 96, 96, TRUE, NULL)) {
+        gtk_window_set_icon(GTK_WINDOW(m_hWnd), pb);
+        g_object_unref(pb);
+    }
+}
+#endif
 
 bool Window::isMinimized()
 {
@@ -389,10 +395,10 @@ bool Window::isMinimized()
     wpl.length = sizeof(wpl);
     if (GetWindowPlacement(m_hWnd, &wpl))
         return wpl.showCmd == SW_SHOWMINIMIZED;
-#else
-
-#endif
     return false;
+#else
+    return pimpl->state & GDK_WINDOW_STATE_ICONIFIED;
+#endif
 }
 
 bool Window::isMaximized()
@@ -402,10 +408,10 @@ bool Window::isMaximized()
     wpl.length = sizeof(wpl);
     if (GetWindowPlacement(m_hWnd, &wpl))
         return wpl.showCmd == SW_SHOWMAXIMIZED;
-#else
-
-#endif
     return false;
+#else
+    return gtk_window_is_maximized(GTK_WINDOW(m_hWnd));
+#endif
 }
 
 Widget *Window::centralWidget()
@@ -737,11 +743,42 @@ bool Window::event(GdkEventType ev_type, void *param)
         x -= grc.x;
         y -= grc.y;
         Rect rc(x, y, w, h);
-        metrics()->setMetrics(Metrics::BorderRadius, pimpl->is_maximized ? 0 : WINDOW_CORNER_RADIUS);
+        if (pimpl->is_support_round_corners)
+            metrics()->setMetrics(Metrics::BorderRadius, pimpl->is_maximized ? 0 : WINDOW_CORNER_RADIUS);
 
         engine()->Begin(this, (cairo_t*)param, &rc);
-        engine()->FillBackground();
+        engine()->DrawRoundedRect();
         engine()->End();
+        return false;
+    }
+
+    case GDK_CONFIG_CUSTOM: {
+        return false;
+    }
+
+    case GDK_SIZING_CUSTOM: {
+        int w = 0, h = 0;
+        gtk_window_get_size(GTK_WINDOW(m_hWnd), &w, &h);
+        if (m_centralWidget) {
+            m_centralWidget->setGeometry(m_contentMargins.left + m_resAreaWidth, m_contentMargins.top + m_resAreaWidth,
+                                         w - m_contentMargins.right - m_contentMargins.left - 2*m_resAreaWidth,
+                                         h - m_contentMargins.bottom - m_contentMargins.top - 2*m_resAreaWidth);
+            // set_rounded_corners(m_centralWidget->nativeWindowHandle(), metrics()->value(Metrics::BorderRadius));
+        }
+        return false;
+    }
+
+    case GDK_CONFIGURE_AFTER: {
+        gint x = 0, y = 0;
+        gtk_window_get_position(GTK_WINDOW(m_hWnd), &x, &y);
+        pimpl->pos = Point(x, y);
+        if (!pimpl->is_maximized) {
+            pimpl->normalPos = pimpl->pos;
+        }
+        return false;
+    }
+
+    case GDK_FOCUS_CHANGE_AFTER: {
         return false;
     }
 

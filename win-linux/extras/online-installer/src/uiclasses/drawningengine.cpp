@@ -5,6 +5,7 @@
 #ifdef _WIN32
 #else
 # include <glib.h>
+# include <pango/pangocairo.h>
 # define GetRValue(rgb) ((double)((BYTE)(rgb))/255)
 # define GetGValue(rgb) ((double)((BYTE)(((WORD)(rgb)) >> 8))/255)
 # define GetBValue(rgb) ((double)((BYTE)((rgb) >> 16))/255)
@@ -615,16 +616,82 @@ void DrawingEngine::Begin(DrawningSurface *ds, cairo_t *cr, Rect *rc)
     m_rc = rc;
 }
 
+void DrawingEngine::DrawText(const Rect &rc, const std::string &text, bool multiline) const
+{
+    Rect _rc(rc.x + m_ds->metrics()->value(Metrics::TextMarginLeft), rc.y + m_ds->metrics()->value(Metrics::TextMarginTop),
+             rc.width - m_ds->metrics()->value(Metrics::TextMarginRight) - m_ds->metrics()->value(Metrics::TextMarginLeft),
+             rc.height - m_ds->metrics()->value(Metrics::TextMarginBottom) - m_ds->metrics()->value(Metrics::TextMarginTop));
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Text);
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+    PangoLayout *lut = pango_cairo_create_layout(m_cr);
+    pango_layout_set_text(lut, text.c_str(), -1);
+    PangoFontDescription *dscr = pango_font_description_new();
+    pango_font_description_set_family(dscr, "Sans");
+    pango_font_description_set_size(dscr, m_ds->metrics()->value(Metrics::FontHeight) * PANGO_SCALE);
+    pango_layout_set_font_description(lut, dscr);
+    pango_font_description_free(dscr);
+    pango_layout_set_wrap(lut, PANGO_WRAP_WORD);
+
+    pango_layout_set_width(lut, multiline ? _rc.width * PANGO_SCALE : -1);
+    pango_layout_set_height(lut, _rc.height * PANGO_SCALE);
+
+    int txt_w, txt_h;
+    pango_layout_get_size(lut, &txt_w, &txt_h);
+    txt_w /= PANGO_SCALE;
+    txt_h /= PANGO_SCALE;
+
+    int text_x = _rc.x;
+    int text_y = _rc.y;
+    PangoAlignment h_algn;
+    int algn = m_ds->metrics()->value(Metrics::TextAlignment);
+    if (algn & Metrics::AlignHLeft) {
+        h_algn = PANGO_ALIGN_LEFT;
+    }
+    if (algn & Metrics::AlignHCenter) {
+        h_algn = PANGO_ALIGN_CENTER;
+        if (!multiline)
+            text_x += (_rc.width - txt_w) / 2;
+    }
+    if (algn & Metrics::AlignHRight) {
+        h_algn = PANGO_ALIGN_RIGHT;
+        if (!multiline)
+            text_x += _rc.width - txt_w;
+    }
+    if (algn & Metrics::AlignVTop)
+        text_y += 0;
+    if (algn & Metrics::AlignVCenter)
+        text_y += (_rc.height - txt_h) / 2;
+    if (algn & Metrics::AlignVBottom)
+        text_y += _rc.height - txt_h;
+
+    pango_layout_set_alignment(lut, h_algn);
+    cairo_move_to(m_cr, text_x, text_y);
+    pango_cairo_show_layout(m_cr, lut);
+    g_object_unref(lut);
+}
+
 void DrawingEngine::FillBackground() const
+{
+    COLORREF rgb = m_ds->palette()->color(Palette::Background);
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+    cairo_paint(m_cr);
+}
+
+void DrawingEngine::DrawRoundedRect()
 {
     COLORREF rgb = m_ds->palette()->color(Palette::Background);
     cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
     RoundedPath(m_cr, m_rc->x, m_rc->y, m_rc->width, m_rc->height, m_ds->metrics()->value(Metrics::BorderRadius));
 }
 
-void DrawingEngine::DrawRoundedRect()
+void DrawingEngine::DrawBorder() const
 {
-
+    COLORREF rgb = m_ds->palette()->color(Palette::Border);
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::BorderWidth));
+    cairo_rectangle(m_cr, 0, 0, m_rc->width, m_rc->height);
+    cairo_stroke(m_cr);
 }
 
 void DrawingEngine::End()

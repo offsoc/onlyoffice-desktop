@@ -20,6 +20,15 @@ struct Rect {
     int x, y, width, height;
 };
 
+struct Point {
+    Point();
+    Point(int, int);
+    Point(const Point&);
+    Point& operator=(const Point&);
+
+    int x, y;
+};
+
 struct Size {
     Size();
     Size(int, int);

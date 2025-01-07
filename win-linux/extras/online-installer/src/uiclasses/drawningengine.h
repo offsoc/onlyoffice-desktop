@@ -24,13 +24,12 @@ public:
     DrawingEngine& operator=(const DrawingEngine&) = delete;
     static DrawingEngine *instance();
 
-
     DrawningSurface *surface();
+    void FillBackground() const;
+    void DrawRoundedRect();
+    void DrawBorder() const;
 #ifdef _WIN32
     void Begin(DrawningSurface*, HWND, RECT *rc);
-    void FillBackground() const;
-    // void DrawRoundedRect();
-    void DrawBorder() const;
     void DrawTopBorder(int, COLORREF) const;
     void DrawIcon(HICON hIcon) const;
     void DrawEmfIcon(HENHMETAFILE hIconc) const;
@@ -53,11 +52,9 @@ public:
     // void LayeredEnd();
 #else
     void Begin(DrawningSurface*, cairo_t*, Rect *rc);
-    void FillBackground() const;
-    void DrawRoundedRect();
+    void DrawText(const Rect &rc, const std::string &text, bool multiline = false) const;
     void End();
 #endif
-
 
 private:
     DrawingEngine();

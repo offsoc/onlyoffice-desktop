@@ -44,7 +44,11 @@ public:
     void showNormal();
     void showMinimized();
     void showMaximized();
+#ifdef _WIN32
     void setIcon(int);
+#else
+    void setIcon(const char*);
+#endif
     void setLayout(Layout*) = delete;
     bool isMinimized();
     bool isMaximized();

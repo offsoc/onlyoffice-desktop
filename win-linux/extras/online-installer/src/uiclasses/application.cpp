@@ -21,9 +21,11 @@ public:
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #else
     int exit_code;
-    void registerClass(Widget *wgt);
+    void registerEvents(Widget *wgt);
     static gboolean EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
     static void EventAfterProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
+    static gboolean ConfigEventProc(GtkWidget *wgt, GdkEventConfigure *ev, gpointer data);
+    static void SizeEventProc(GtkWidget *wgt, GtkAllocation *alc, gpointer data);
     static gboolean DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data);
     static void DestroyProc(GtkWidget *wgt, gpointer data);
 #endif
@@ -96,10 +98,12 @@ LRESULT CALLBACK Application::ApplicationPrivate::WndProc(HWND hWnd, UINT msg, W
 
 #else
 
-void Application::ApplicationPrivate::registerClass(Widget *wgt)
+void Application::ApplicationPrivate::registerEvents(Widget *wgt)
 {
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(EventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event-after", G_CALLBACK(EventAfterProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "configure-event", G_CALLBACK(ConfigEventProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "size-allocate", G_CALLBACK(SizeEventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "draw", G_CALLBACK(DrawProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "destroy", G_CALLBACK(DestroyProc), wgt);
 }
@@ -131,6 +135,21 @@ void Application::ApplicationPrivate::EventAfterProc(GtkWidget *wgt, GdkEvent *e
         default:
             break;
         }
+    }
+}
+
+gboolean Application::ApplicationPrivate::ConfigEventProc(GtkWidget *wgt, GdkEventConfigure *ev, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        return w->event((GdkEventType)GDK_CONFIG_CUSTOM, ev);
+    }
+    return FALSE;
+}
+
+void Application::ApplicationPrivate::SizeEventProc(GtkWidget *wgt, GtkAllocation *alc, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        w->event((GdkEventType)GDK_SIZING_CUSTOM, (void*)alc);
     }
 }
 
@@ -290,6 +309,8 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
     case ObjectType::DialogType:
         className = "Dialog_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_dialog_new();
+        if (gtkParent)
+            gtk_widget_set_parent(gtkWgt, gtkParent);
         gtk_window_resize(GTK_WINDOW(gtkWgt), rc.width, rc.height);
         gtk_window_move(GTK_WINDOW(gtkWgt), rc.x, rc.y);
         break;
@@ -306,19 +327,16 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
         className = "Widget_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_layout_new(NULL, NULL);
         gtk_widget_set_size_request(gtkWgt, rc.width, rc.height);
-        // gtk_widget_add_events(gtkWgt, gtk_widget_get_events(gtkWgt) | GDK_EXPOSURE_MASK);
+        // gtk_widget_add_events(gtkWgt, gtk_widget_get_events(gtkWgt) | GDK_STRUCTURE_MASK);
+        if (gtkParent)
+            gtk_layout_put((GtkLayout*)wgt->parentWidget()->gtkLayout(), gtkWgt, rc.x, rc.y);
         break;
     }
 
     wgt->setNativeWindowHandle(gtkWgt);
-    d_ptr->registerClass(wgt);
+    d_ptr->registerEvents(wgt);
     gtk_widget_set_name(gtkWgt, className.c_str());
     if (d_ptr->layoutDirection == LayoutDirection::RightToLeft)
         gtk_widget_set_direction(gtkWgt, GTK_TEXT_DIR_RTL);
-    if (gtkParent)
-        gtk_layout_put((GtkLayout*)wgt->parentWidget()->gtkLayout(), gtkWgt, rc.x, rc.y);
-        // gtk_widget_set_parent(gtkWgt, gtkParent);
 #endif
 }
-
-

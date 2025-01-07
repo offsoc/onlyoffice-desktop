@@ -18,7 +18,11 @@ public:
     virtual void disconnect(int) override;
 
 protected:
+#ifdef _WIN32
     virtual bool event(UINT, WPARAM, LPARAM, LRESULT*) override;
+#else
+    virtual bool event(GdkEventType ev_type, void *param) override;
+#endif
     virtual void click();
 
     std::wstring m_text;

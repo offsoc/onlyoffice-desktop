@@ -57,6 +57,30 @@ Rect& Rect::operator=(const Rect &rc)
 }
 
 
+Point::Point() :
+    x(0), y(0)
+{}
+
+Point::Point(int x, int y) :
+    x(x), y(y)
+{}
+
+Point::Point(const Point &pt)
+{
+    x = pt.x;
+    y = pt.y;
+}
+
+Point& Point::operator=(const Point &pt)
+{
+    if (this != &pt) {
+        x = pt.x;
+        y = pt.y;
+    }
+    return *this;
+}
+
+
 Size::Size() :
     width(0), height(0)
 {}

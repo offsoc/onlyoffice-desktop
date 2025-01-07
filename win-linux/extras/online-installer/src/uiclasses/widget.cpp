@@ -107,11 +107,11 @@ Widget::~Widget()
             delete m_layout;
         m_layout = nullptr;
     }
-#ifdef _WIN32
     if (!m_is_destroyed)
+#ifdef _WIN32
         DestroyWindow(m_hWnd);
 #else
-
+        gtk_widget_destroy(m_hWnd);
 #endif
 }
 
@@ -120,10 +120,16 @@ void Widget::setGeometry(int x, int y, int width, int height)
 #ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, x, y, width, height, SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
 #else
+    // m_size = Size(width, height);
     gtk_widget_set_size_request(m_hWnd, width, height);
     if (parentWidget()) {
         gtk_layout_move((GtkLayout*)parentWidget()->gtkLayout(), m_hWnd, x, y);
     }
+    if (m_layout)
+        m_layout->onResize(width, height);
+    for (auto it = m_resize_callbacks.begin(); it != m_resize_callbacks.end(); it++)
+        if (it->second)
+            (it->second)(width, height);
 #endif
 }
 
@@ -143,7 +149,13 @@ void Widget::resize(int w, int h)
 #ifdef _WIN32
     SetWindowPos(m_hWnd, NULL, 0, 0, w, h, SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER /*| SWP_NOSENDCHANGING*/);
 #else
+    // m_size = Size(w, h);
     gtk_widget_set_size_request(m_hWnd, w, h);
+    if (m_layout)
+        m_layout->onResize(w, h);
+    for (auto it = m_resize_callbacks.begin(); it != m_resize_callbacks.end(); it++)
+        if (it->second)
+            (it->second)(w, h);
 #endif
 }
 
@@ -180,7 +192,7 @@ Size Widget::size()
     GetClientRect(m_hWnd, &rc);
     return Size(rc.right - rc.left, rc.bottom - rc.top);
 #else
-    return Size();
+    return m_size;
 #endif
 }
 
@@ -192,7 +204,8 @@ void Widget::size(int *width, int *height)
     *width = rc.right - rc.left;
     *height =  rc.bottom - rc.top;
 #else
-
+    *width = m_size.width;
+    *height = m_size.height;
 #endif
 }
 
@@ -272,7 +285,12 @@ bool Widget::underMouse()
     GetCursorPos(&pt);
     return WindowFromPoint(pt) == m_hWnd;
 #else
-    return false;
+    GdkDisplay *dsp = gdk_display_get_default();
+    GdkDeviceManager *dm = gdk_display_get_device_manager(dsp);
+    GdkDevice *dev = gdk_device_manager_get_client_pointer(dm);
+    gint x, y;
+    gdk_device_get_position(dev, NULL, &x, &y);
+    return gdk_device_get_window_at_position(dev, &x, &y) == gtk_layout_get_bin_window(GTK_LAYOUT(m_hWnd));
 #endif
 }
 
@@ -502,17 +520,33 @@ bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return false;
 }
 #else
+
 bool Widget::event(GdkEventType ev_type, void *param)
 {
     switch (ev_type) {
     case GDK_DRAW_CUSTOM: {
-        int w = 0, h = 0;
-        gtk_widget_get_size_request(m_hWnd, &w, &h);
-        Rect rc(0, 0, w, h);
+        Rect rc(0, 0, m_size.width, m_size.height);
         engine()->Begin(this, (cairo_t*)param, &rc);
-        engine()->FillBackground();
+        engine()->DrawRoundedRect();
+        if (metrics()->value(Metrics::BorderWidth) != 0)
+            engine()->DrawBorder();
         engine()->End();
         return false;
+    }
+
+    // case GDK_CONFIG_CUSTOM: {
+    //     return false;
+    // }
+
+    case GDK_SIZING_CUSTOM: {
+        GtkAllocation *alc = (GtkAllocation*)param;
+        m_size = Size(alc->width, alc->height);
+        // if (m_layout)
+        //     m_layout->onResize(alc->width, alc->height);
+        // for (auto it = m_resize_callbacks.begin(); it != m_resize_callbacks.end(); it++)
+        //     if (it->second)
+        //         (it->second)(alc->width, alc->height);
+        break;
     }
 
     case GDK_DELETE: {

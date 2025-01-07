@@ -36,7 +36,7 @@ HEADERS += $$PWD/src/version.h \
            $$UICLASSES/widget.h \
            # $$UICLASSES/label.h \
            # $$UICLASSES/caption.h \
-           # $$UICLASSES/abstractbutton.h \
+           $$UICLASSES/abstractbutton.h \
            # $$UICLASSES/button.h \
            # $$UICLASSES/checkbox.h \
            # $$UICLASSES/radiobutton.h \
@@ -62,7 +62,7 @@ SOURCES += $$PWD/src/main.cpp \
            $$UICLASSES/widget.cpp \
            # $$UICLASSES/label.cpp \
            # $$UICLASSES/caption.cpp \
-           # $$UICLASSES/abstractbutton.cpp \
+           $$UICLASSES/abstractbutton.cpp \
            # $$UICLASSES/button.cpp \
            # $$UICLASSES/checkbox.cpp \
            # $$UICLASSES/radiobutton.cpp \
@@ -150,6 +150,15 @@ core_linux {
     CONFIG += link_pkgconfig
     PKGCONFIG += gtk+-3.0
     LIBS += -lcurl -luuid -larchive -lpthread -lcrypto
+
+    GLIB_RESOURCE_FILES += $$PWD/res/gresource.xml
+
+    glib_resources.name = gresource
+    glib_resources.input = GLIB_RESOURCE_FILES
+    glib_resources.output = $$PWD/res/${QMAKE_FILE_IN_BASE}.c
+    glib_resources.commands = glib-compile-resources --target ${QMAKE_FILE_OUT} --sourcedir ${QMAKE_FILE_IN_PATH} --generate-source ${QMAKE_FILE_IN}
+    glib_resources.variable_out = SOURCES
+    QMAKE_EXTRA_COMPILERS += glib_resources
 }
 
 OBJECTS_DIR = $$DESTDIR/obj
