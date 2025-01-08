@@ -735,13 +735,10 @@ bool Window::event(GdkEventType ev_type, void *param)
     switch (ev_type) {
     case GDK_DRAW_CUSTOM: {
         int x = 0, y = 0, w = 0, h = 0;
-        GdkRectangle grc{0, 0, 0, 0};
-        GdkWindow *gdk_wnd = gtk_widget_get_window(m_hWnd);
-        gdk_window_get_frame_extents(gdk_wnd, &grc);
-        gtk_window_get_size(GTK_WINDOW(m_hWnd), &w, &h);
-        gtk_window_get_position(GTK_WINDOW(m_hWnd), &x, &y);
-        x -= grc.x;
-        y -= grc.y;
+        GtkWidget *content = gtk_bin_get_child(GTK_BIN(m_hWnd));
+        w = gtk_widget_get_allocated_width(content);
+        h = gtk_widget_get_allocated_height(content);
+        gtk_widget_translate_coordinates(content, m_hWnd, 0, 0, &x, &y);
         Rect rc(x, y, w, h);
         if (pimpl->is_support_round_corners)
             metrics()->setMetrics(Metrics::BorderRadius, pimpl->is_maximized ? 0 : WINDOW_CORNER_RADIUS);
@@ -758,7 +755,9 @@ bool Window::event(GdkEventType ev_type, void *param)
 
     case GDK_SIZING_CUSTOM: {
         int w = 0, h = 0;
-        gtk_window_get_size(GTK_WINDOW(m_hWnd), &w, &h);
+        GtkWidget *content = gtk_bin_get_child(GTK_BIN(m_hWnd));
+        w = gtk_widget_get_allocated_width(content);
+        h = gtk_widget_get_allocated_height(content);
         if (m_centralWidget) {
             m_centralWidget->setGeometry(m_contentMargins.left + m_resAreaWidth, m_contentMargins.top + m_resAreaWidth,
                                          w - m_contentMargins.right - m_contentMargins.left - 2*m_resAreaWidth,

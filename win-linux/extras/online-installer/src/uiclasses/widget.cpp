@@ -6,7 +6,7 @@
 #ifdef _WIN32
 # include <CommCtrl.h>
 #else
-
+# include <cstring>
 #endif
 
 
@@ -176,7 +176,7 @@ void Widget::close()
     } else {
         GdkEvent *ev = gdk_event_new(GDK_DELETE);
         GdkWindow *gdk_wnd = GTK_IS_LAYOUT(m_hWnd) ? gtk_layout_get_bin_window(GTK_LAYOUT(m_hWnd)) : gtk_widget_get_window(m_hWnd);
-        ev->any.window = g_object_ref(gdk_wnd);
+        ev->any.window = (GdkWindow*)g_object_ref(gdk_wnd);
         ev->any.send_event = TRUE;
         gdk_event_put(ev);
         gdk_event_free(ev);

@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 #else
-    GtkApplication *gtk_app = gtk_application_new("com.onlyoffice.OnlineInstaller", G_APPLICATION_DEFAULT_FLAGS);
+    GtkApplication *gtk_app = gtk_application_new("com.onlyoffice.OnlineInstaller", G_APPLICATION_FLAGS_NONE);
     if (!g_application_register(G_APPLICATION(gtk_app), NULL, NULL)) {
         g_object_unref(gtk_app);
         return 1;
