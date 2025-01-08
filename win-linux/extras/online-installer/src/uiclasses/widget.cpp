@@ -171,7 +171,16 @@ void Widget::close()
 #ifdef _WIN32
     PostMessage(m_hWnd, WM_CLOSE, 0, 0);
 #else
-
+    if (GTK_IS_WINDOW(m_hWnd)) {
+        gtk_window_close(GTK_WINDOW(m_hWnd));
+    } else {
+        GdkEvent *ev = gdk_event_new(GDK_DELETE);
+        GdkWindow *gdk_wnd = GTK_IS_LAYOUT(m_hWnd) ? gtk_layout_get_bin_window(GTK_LAYOUT(m_hWnd)) : gtk_widget_get_window(m_hWnd);
+        ev->any.window = g_object_ref(gdk_wnd);
+        ev->any.send_event = TRUE;
+        gdk_event_put(ev);
+        gdk_event_free(ev);
+    }
 #endif
 }
 
@@ -524,6 +533,14 @@ bool Widget::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 bool Widget::event(GdkEventType ev_type, void *param)
 {
     switch (ev_type) {
+    case GDK_REALIZE_CUSTOM: {
+        m_is_created = true;
+        for (auto it = m_create_callbacks.begin(); it != m_create_callbacks.end(); it++)
+            if (it->second)
+                (it->second)();
+        return false;
+    }
+
     case GDK_DRAW_CUSTOM: {
         Rect rc(0, 0, m_size.width, m_size.height);
         engine()->Begin(this, (cairo_t*)param, &rc);
@@ -532,6 +549,18 @@ bool Widget::event(GdkEventType ev_type, void *param)
             engine()->DrawBorder();
         engine()->End();
         return false;
+    }
+
+    case GDK_ENTER_NOTIFY: {
+        if (!m_mouse_entered)
+            m_mouse_entered = true;
+        break;
+    }
+
+    case GDK_LEAVE_NOTIFY: {
+        if (m_mouse_entered)
+            m_mouse_entered = false;
+        break;
     }
 
     // case GDK_CONFIG_CUSTOM: {

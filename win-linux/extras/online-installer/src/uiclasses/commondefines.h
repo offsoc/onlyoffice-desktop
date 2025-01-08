@@ -18,6 +18,7 @@
 # define GDK_WINDOW_STATE_AFTER (GDK_EVENT_LAST + 5)
 # define GDK_SIZING_CUSTOM (GDK_EVENT_LAST + 6)
 # define GDK_CONFIG_CUSTOM (GDK_EVENT_LAST + 7)
+# define GDK_REALIZE_CUSTOM (GDK_EVENT_LAST + 8)
 #endif
 
 typedef std::function<void(void)> FnVoidVoid;

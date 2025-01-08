@@ -5,9 +5,13 @@
 
 Label::Label(Widget *parent) :
     Widget(parent, ObjectType::WidgetType),
+#ifdef _WIN32
     m_hIcon(nullptr),
     m_hMetaFile(nullptr),
     m_hBmp(nullptr),
+#else
+    m_pb(nullptr),
+#endif
     m_multiline(false)
 {
 
@@ -15,6 +19,7 @@ Label::Label(Widget *parent) :
 
 Label::~Label()
 {
+#ifdef _WIN32
     if (m_hIcon) {
         DestroyIcon(m_hIcon);
         m_hIcon = nullptr;
@@ -27,27 +32,42 @@ Label::~Label()
     if (m_hBmp) {
         delete m_hBmp, m_hBmp = nullptr;
     }
+#else
+    if (m_pb) {
+        g_object_unref(m_pb);
+        m_pb = nullptr;
+    }
+#endif
 }
 
-void Label::setText(const std::wstring &text, bool multiline)
+void Label::setText(const tstring &text, bool multiline)
 {
     m_text = text;
     m_multiline = multiline;
     update();
 }
 
-void Label::setIcon(const std::wstring &path, int w, int h)
+void Label::setIcon(const tstring &path, int w, int h)
 {
+    metrics()->setMetrics(Metrics::IconWidth, w);
+    metrics()->setMetrics(Metrics::IconHeight, h);
+#ifdef _WIN32
     if (m_hIcon) {
         DestroyIcon(m_hIcon);
         m_hIcon = nullptr;
     }
-    metrics()->setMetrics(Metrics::IconWidth, w);
-    metrics()->setMetrics(Metrics::IconHeight, h);
     m_hIcon = (HICON)LoadImage(NULL, path.c_str(), IMAGE_ICON, w, h, LR_LOADFROMFILE | LR_DEFAULTCOLOR | LR_SHARED);
+#else
+    if (m_pb) {
+        g_object_unref(m_pb);
+        m_pb = nullptr;
+    }
+    m_pb = gdk_pixbuf_new_from_resource_at_scale(path.c_str(), w, h, TRUE, NULL);
+#endif
     update();
 }
 
+#ifdef _WIN32
 void Label::setIcon(int id, int w, int h)
 {
     if (m_hIcon) {
@@ -131,6 +151,22 @@ void Label::setImage(int id, int w, int h)
     }
     update();
 }
+#endif
+
+void Label::setImage(const tstring &path, int w, int h)
+{
+#ifdef _WIN32
+    metrics()->setMetrics(Metrics::IconWidth, w);
+    metrics()->setMetrics(Metrics::IconHeight, h);
+    if (m_hBmp) {
+        delete m_hBmp, m_hBmp = nullptr;
+    }
+    m_hBmp = new Gdiplus::Bitmap(path.c_str());
+    update();
+#else
+    setIcon(path, w, h);
+#endif
+}
 
 void Label::setIconSize(int w, int h)
 {
@@ -139,6 +175,7 @@ void Label::setIconSize(int w, int h)
     update();
 }
 
+#ifdef _WIN32
 bool Label::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 {
     switch (msg) {
@@ -183,3 +220,32 @@ bool Label::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     }
     return Widget::event(msg, wParam, lParam, result);
 }
+#else
+bool Label::event(GdkEventType ev_type, void *param)
+{
+    switch (ev_type) {
+    case GDK_DRAW_CUSTOM: {
+        Rect rc(0, 0, gtk_widget_get_allocated_width(m_hWnd), gtk_widget_get_allocated_height(m_hWnd));
+
+        engine()->Begin(this, (cairo_t*)param, &rc);
+        engine()->FillBackground();
+        //    DrawRoundedRect();
+        if (metrics()->value(Metrics::BorderWidth) != 0)
+            engine()->DrawBorder();
+        // if (m_pb)
+        //     engine()->DrawImage(m_pb);
+        if (m_pb)
+            engine()->DrawIcon(m_pb);
+        if (!m_text.empty())
+            engine()->DrawText(rc, m_text, m_multiline);
+
+        engine()->End();
+        return false;
+    }
+
+    default:
+        break;
+    }
+    return Widget::event(ev_type, param);
+}
+#endif

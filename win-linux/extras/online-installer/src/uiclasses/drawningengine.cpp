@@ -671,6 +671,16 @@ void DrawingEngine::DrawText(const Rect &rc, const std::string &text, bool multi
     g_object_unref(lut);
 }
 
+void DrawingEngine::DrawIcon(GdkPixbuf *pb) const
+{
+    int x = m_rc->x + (m_rc->width - m_ds->metrics()->value(Metrics::IconWidth)) / 2;
+    int y = m_rc->y + (m_rc->height - m_ds->metrics()->value(Metrics::IconHeight)) / 2;
+    cairo_surface_t *surface = gdk_cairo_surface_create_from_pixbuf(pb, 1, NULL);
+    cairo_set_source_surface(m_cr, surface, x, y);
+    cairo_paint(m_cr);
+    cairo_surface_destroy(surface);
+}
+
 void DrawingEngine::FillBackground() const
 {
     COLORREF rgb = m_ds->palette()->color(Palette::Background);

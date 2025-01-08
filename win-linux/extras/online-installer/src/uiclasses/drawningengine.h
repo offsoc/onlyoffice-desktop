@@ -7,6 +7,7 @@
 # include <gdiplus.h>
 #else
 # include <cstdint>
+# include <gdk/gdk.h>
 # include <cairo.h>
 # include <common.h>
   // typedef unsigned char BYTE;
@@ -53,6 +54,7 @@ public:
 #else
     void Begin(DrawningSurface*, cairo_t*, Rect *rc);
     void DrawText(const Rect &rc, const std::string &text, bool multiline = false) const;
+    void DrawIcon(GdkPixbuf *pb) const;
     void End();
 #endif
 

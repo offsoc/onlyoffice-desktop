@@ -24,6 +24,7 @@ public:
     void registerEvents(Widget *wgt);
     static gboolean EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
     static void EventAfterProc(GtkWidget *wgt, GdkEvent *ev, gpointer data);
+    static void RealizeEventProc(GtkWidget *wgt, gpointer data);
     static gboolean ConfigEventProc(GtkWidget *wgt, GdkEventConfigure *ev, gpointer data);
     static void SizeEventProc(GtkWidget *wgt, GtkAllocation *alc, gpointer data);
     static gboolean DrawProc(GtkWidget *wgt, cairo_t *cr, gpointer data);
@@ -102,6 +103,7 @@ void Application::ApplicationPrivate::registerEvents(Widget *wgt)
 {
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event", G_CALLBACK(EventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "event-after", G_CALLBACK(EventAfterProc), wgt);
+    g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "realize", G_CALLBACK(RealizeEventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "configure-event", G_CALLBACK(ConfigEventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "size-allocate", G_CALLBACK(SizeEventProc), wgt);
     g_signal_connect(G_OBJECT(wgt->nativeWindowHandle()), "draw", G_CALLBACK(DrawProc), wgt);
@@ -111,7 +113,7 @@ void Application::ApplicationPrivate::registerEvents(Widget *wgt)
 gboolean Application::ApplicationPrivate::EventProc(GtkWidget *wgt, GdkEvent *ev, gpointer data)
 {
     if (Widget *w = (Widget*)data) {
-        return w->event(ev->type, NULL);
+        return w->event(ev->type, (void*)ev);
     }
     return FALSE;
 }
@@ -135,6 +137,13 @@ void Application::ApplicationPrivate::EventAfterProc(GtkWidget *wgt, GdkEvent *e
         default:
             break;
         }
+    }
+}
+
+void Application::ApplicationPrivate::RealizeEventProc(GtkWidget *wgt, gpointer data)
+{
+    if (Widget *w = (Widget*)data) {
+        w->event((GdkEventType)GDK_REALIZE_CUSTOM, NULL);
     }
 }
 
@@ -327,7 +336,7 @@ void Application::registerWidget(Widget *wgt, ObjectType objType, const Rect &rc
         className = "Widget_" + std::to_string(++d_ptr->windowId);
         gtkWgt = gtk_layout_new(NULL, NULL);
         gtk_widget_set_size_request(gtkWgt, rc.width, rc.height);
-        // gtk_widget_add_events(gtkWgt, gtk_widget_get_events(gtkWgt) | GDK_STRUCTURE_MASK);
+        gtk_widget_add_events(gtkWgt, gtk_widget_get_events(gtkWgt) | GDK_ALL_EVENTS_MASK);
         if (gtkParent)
             gtk_layout_put((GtkLayout*)wgt->parentWidget()->gtkLayout(), gtkWgt, rc.x, rc.y);
         break;

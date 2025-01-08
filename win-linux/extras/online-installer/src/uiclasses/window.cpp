@@ -379,9 +379,9 @@ void Window::setIcon(int id)
     SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 }
 #else
-void Window::setIcon(const char *path)
+void Window::setIcon(const tstring &path)
 {
-    if (GdkPixbuf *pb = gdk_pixbuf_new_from_resource_at_scale(path, 96, 96, TRUE, NULL)) {
+    if (GdkPixbuf *pb = gdk_pixbuf_new_from_resource_at_scale(path.c_str(), 96, 96, TRUE, NULL)) {
         gtk_window_set_icon(GTK_WINDOW(m_hWnd), pb);
         g_object_unref(pb);
     }

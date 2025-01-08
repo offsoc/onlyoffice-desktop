@@ -79,6 +79,38 @@ bool AbstractButton::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *resu
 bool AbstractButton::event(GdkEventType ev_type, void *param)
 {
     switch (ev_type) {
+    case GDK_BUTTON_PRESS: {
+        if (!m_disabled) {
+            palette()->setCurrentState(Palette::Pressed);
+            repaint();
+        }
+        return false;
+    }
+
+    case GDK_BUTTON_RELEASE: {
+        if (!m_disabled) {
+            palette()->setCurrentState(Palette::Hover);
+            repaint();
+            click();
+        }
+        return false;
+    }
+
+    case GDK_ENTER_NOTIFY: {
+        if (!m_disabled) {
+            palette()->setCurrentState(Palette::Hover);
+            repaint();
+        }
+        break;
+    }
+
+    case GDK_LEAVE_NOTIFY: {
+        if (!m_disabled) {
+            palette()->setCurrentState(Palette::Normal);
+            repaint();
+        }
+        break;
+    }
 
     default:
         break;

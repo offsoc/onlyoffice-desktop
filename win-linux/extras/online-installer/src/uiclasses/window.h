@@ -47,7 +47,7 @@ public:
 #ifdef _WIN32
     void setIcon(int);
 #else
-    void setIcon(const char*);
+    void setIcon(const tstring&);
 #endif
     void setLayout(Layout*) = delete;
     bool isMinimized();
