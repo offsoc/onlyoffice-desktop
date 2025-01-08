@@ -35,7 +35,7 @@ HEADERS += $$PWD/src/version.h \
            $$UICLASSES/window.h \
            $$UICLASSES/widget.h \
            $$UICLASSES/label.h \
-           # $$UICLASSES/caption.h \
+           $$UICLASSES/caption.h \
            $$UICLASSES/abstractbutton.h \
            $$UICLASSES/button.h \
            # $$UICLASSES/checkbox.h \
@@ -61,7 +61,7 @@ SOURCES += $$PWD/src/main.cpp \
            $$UICLASSES/window.cpp \
            $$UICLASSES/widget.cpp \
            $$UICLASSES/label.cpp \
-           # $$UICLASSES/caption.cpp \
+           $$UICLASSES/caption.cpp \
            $$UICLASSES/abstractbutton.cpp \
            $$UICLASSES/button.cpp \
            # $$UICLASSES/checkbox.cpp \
