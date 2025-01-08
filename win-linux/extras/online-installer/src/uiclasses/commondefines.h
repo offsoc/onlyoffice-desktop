@@ -19,6 +19,8 @@
 # define GDK_SIZING_CUSTOM (GDK_EVENT_LAST + 6)
 # define GDK_CONFIG_CUSTOM (GDK_EVENT_LAST + 7)
 # define GDK_REALIZE_CUSTOM (GDK_EVENT_LAST + 8)
+# define GDK_BUTTON_PRESS_AFTER (GDK_EVENT_LAST + 9)
+# define GDK_DOUBLE_BUTTON_PRESS_AFTER (GDK_EVENT_LAST + 10)
 #endif
 
 typedef std::function<void(void)> FnVoidVoid;

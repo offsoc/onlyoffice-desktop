@@ -102,6 +102,16 @@ bool Caption::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     return Label::event(msg, wParam, lParam, result);
 }
 #else
+gboolean on_dbl_button_press(GtkWindow *root)
+{
+    if (gtk_window_is_maximized(GTK_WINDOW(root))) {
+        gtk_window_unmaximize(GTK_WINDOW(root));
+    } else {
+        gtk_window_maximize(GTK_WINDOW(root));
+    }
+    return G_SOURCE_REMOVE;
+}
+
 bool Caption::event(GdkEventType ev_type, void *param)
 {
     switch (ev_type) {
@@ -130,15 +140,11 @@ bool Caption::event(GdkEventType ev_type, void *param)
         return false;
     }
 
-    case GDK_DOUBLE_BUTTON_PRESS: {
+    case GDK_DOUBLE_BUTTON_PRESS_AFTER: {
         GdkEventButton *bev = (GdkEventButton*)param;
         GtkWidget *root = gtk_widget_get_toplevel(m_hWnd);
         if (root && bev->button == GDK_BUTTON_PRIMARY) {
-            if (gtk_window_is_maximized(GTK_WINDOW(root))) {
-                gtk_window_unmaximize(GTK_WINDOW(root));
-            } else {
-                gtk_window_maximize(GTK_WINDOW(root));
-            }
+            g_timeout_add(150, (GSourceFunc)on_dbl_button_press, root);
             return true;
         }
         return false;

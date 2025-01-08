@@ -134,6 +134,14 @@ void Application::ApplicationPrivate::EventAfterProc(GtkWidget *wgt, GdkEvent *e
             w->event((GdkEventType)GDK_WINDOW_STATE_AFTER, (void*)ev);
             break;
         }
+        case GDK_BUTTON_PRESS: {
+            w->event((GdkEventType)GDK_BUTTON_PRESS_AFTER, (void*)ev);
+            break;
+        }
+        case GDK_DOUBLE_BUTTON_PRESS: {
+            w->event((GdkEventType)GDK_DOUBLE_BUTTON_PRESS_AFTER, (void*)ev);
+            break;
+        }
         default:
             break;
         }
