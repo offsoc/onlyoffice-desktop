@@ -5,11 +5,13 @@
 #ifdef _WIN32
 # include <Windows.h>
 # include <gdiplus.h>
+# define tstring std::wstring
 #else
 # include <cstdint>
 # include <gdk/gdk.h>
 # include <cairo.h>
 # include <common.h>
+# define tstring std::string
   // typedef unsigned char BYTE;
   // typedef uint16_t WORD;
   typedef uint32_t DWORD;
@@ -33,13 +35,13 @@ public:
     void DrawStockMinimizeIcon();
     void DrawStockMaximizeIcon();
     void DrawStockRestoreIcon();
+    void DrawCheckBox(const tstring &text, bool checked = false);
 #ifdef _WIN32
     void Begin(DrawningSurface*, HWND, RECT *rc);
     void DrawTopBorder(int, COLORREF) const;
     void DrawIcon(HICON hIcon) const;
     void DrawEmfIcon(HENHMETAFILE hIconc) const;
     void DrawImage(Gdiplus::Bitmap *hBmp) const;
-    void DrawCheckBox(const std::wstring &text, bool checked = false);
     void DrawRadioButton(const std::wstring &text, bool checked = false);
     void DrawProgressBar(int progress, int pulse_pos);
     void DrawText(const RECT &rc, const std::wstring &text, bool multiline = false) const;

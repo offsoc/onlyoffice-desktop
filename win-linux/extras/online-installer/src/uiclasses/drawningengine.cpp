@@ -601,7 +601,6 @@ static void RoundedPath(cairo_t *cr, int x, int y, int w, int h, int rad)
     // cairo_line_to(cr, x, y + rad);
     // cairo_arc(cr, x + rad, y + rad, rad, G_PI, -G_PI_2);
     cairo_close_path(cr);
-    cairo_fill(cr);
 }
 
 void DrawingEngine::Begin(DrawningSurface *ds, cairo_t *cr, Rect *rc)
@@ -693,6 +692,7 @@ void DrawingEngine::DrawRoundedRect()
     COLORREF rgb = m_ds->palette()->color(Palette::Background);
     cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
     RoundedPath(m_cr, m_rc->x, m_rc->y, m_rc->width, m_rc->height, m_ds->metrics()->value(Metrics::BorderRadius));
+    cairo_fill(m_cr);
 }
 
 void DrawingEngine::DrawBorder() const
@@ -790,6 +790,40 @@ void DrawingEngine::DrawStockRestoreIcon()
     cairo_line_to(m_cr, x, y + m_ds->metrics()->value(Metrics::PrimitiveWidth) - 1);
     cairo_stroke(m_cr);
     cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_DEFAULT);
+}
+
+void DrawingEngine::DrawCheckBox(const tstring &text, bool checked)
+{
+    int icon_width = m_ds->metrics()->value(Metrics::IconWidth);
+    int icon_height = m_ds->metrics()->value(Metrics::IconHeight);
+    int x = m_rc->x;
+    int y = m_rc->y + (m_rc->height - icon_height) / 2;
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Background);
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+    cairo_paint(m_cr);
+
+    rgb = m_ds->palette()->color(Palette::Primitive);
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::PrimitiveWidth));
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+    Rect rc(x, y, icon_width - 1, m_ds->metrics()->value(Metrics::IconHeight) - 1);
+    RoundedPath(m_cr, rc.x, rc.y, rc.width, rc.height, m_ds->metrics()->value(Metrics::PrimitiveRadius));
+    cairo_stroke(m_cr);
+    if (checked) {
+        rgb = m_ds->palette()->color(Palette::AlternatePrimitive);
+        cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::AlternatePrimitiveWidth));
+        cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+        cairo_move_to(m_cr, x + 2, y + icon_height/2 - 1);
+        cairo_line_to(m_cr, x + icon_width/2 - 2, y + icon_height - 5);
+        cairo_line_to(m_cr, x + icon_width - 3, y + 4);
+        cairo_stroke(m_cr);
+    }
+    if (!text.empty()) {
+        Rect rc(m_rc->x + icon_width, m_rc->y, m_rc->width, m_rc->height);
+        DrawText(rc, text);
+    }
 }
 
 void DrawingEngine::End()

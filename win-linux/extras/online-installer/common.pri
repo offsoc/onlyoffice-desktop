@@ -38,7 +38,7 @@ HEADERS += $$PWD/src/version.h \
            $$UICLASSES/caption.h \
            $$UICLASSES/abstractbutton.h \
            $$UICLASSES/button.h \
-           # $$UICLASSES/checkbox.h \
+           $$UICLASSES/checkbox.h \
            # $$UICLASSES/radiobutton.h \
            # $$UICLASSES/progressbar.h \
            $$UICLASSES/layoutitem.h \
@@ -64,7 +64,7 @@ SOURCES += $$PWD/src/main.cpp \
            $$UICLASSES/caption.cpp \
            $$UICLASSES/abstractbutton.cpp \
            $$UICLASSES/button.cpp \
-           # $$UICLASSES/checkbox.cpp \
+           $$UICLASSES/checkbox.cpp \
            # $$UICLASSES/radiobutton.cpp \
            # $$UICLASSES/progressbar.cpp \
            $$UICLASSES/layoutitem.cpp \
