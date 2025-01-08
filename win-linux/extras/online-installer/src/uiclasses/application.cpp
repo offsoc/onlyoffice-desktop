@@ -126,6 +126,10 @@ void Application::ApplicationPrivate::EventAfterProc(GtkWidget *wgt, GdkEvent *e
             w->event((GdkEventType)GDK_CONFIGURE_AFTER, NULL);
             break;
         }
+        case GDK_MAP: {
+            w->event((GdkEventType)GDK_MAP_AFTER, NULL);
+            break;
+        }
         case GDK_FOCUS_CHANGE: {
             w->event((GdkEventType)GDK_FOCUS_CHANGE_AFTER, (void*)ev);
             break;

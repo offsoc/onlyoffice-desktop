@@ -21,6 +21,7 @@
 # define GDK_REALIZE_CUSTOM (GDK_EVENT_LAST + 8)
 # define GDK_BUTTON_PRESS_AFTER (GDK_EVENT_LAST + 9)
 # define GDK_DOUBLE_BUTTON_PRESS_AFTER (GDK_EVENT_LAST + 10)
+# define GDK_MAP_AFTER (GDK_EVENT_LAST + 11)
 #endif
 
 typedef std::function<void(void)> FnVoidVoid;

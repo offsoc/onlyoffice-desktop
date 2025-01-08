@@ -749,6 +749,11 @@ bool Window::event(GdkEventType ev_type, void *param)
         return false;
     }
 
+    case GDK_MAP_AFTER: {
+        gtk_widget_queue_resize(m_hWnd);
+        return false;
+    }
+
     case GDK_CONFIG_CUSTOM: {
         return false;
     }
