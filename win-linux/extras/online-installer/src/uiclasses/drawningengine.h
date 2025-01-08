@@ -29,16 +29,16 @@ public:
     void FillBackground() const;
     void DrawRoundedRect();
     void DrawBorder() const;
+    void DrawStockCloseIcon();
+    void DrawStockMinimizeIcon();
+    void DrawStockMaximizeIcon();
+    void DrawStockRestoreIcon();
 #ifdef _WIN32
     void Begin(DrawningSurface*, HWND, RECT *rc);
     void DrawTopBorder(int, COLORREF) const;
     void DrawIcon(HICON hIcon) const;
     void DrawEmfIcon(HENHMETAFILE hIconc) const;
     void DrawImage(Gdiplus::Bitmap *hBmp) const;
-    void DrawStockCloseIcon();
-    void DrawStockMinimizeIcon();
-    void DrawStockMaximizeIcon();
-    void DrawStockRestoreIcon();
     void DrawCheckBox(const std::wstring &text, bool checked = false);
     void DrawRadioButton(const std::wstring &text, bool checked = false);
     void DrawProgressBar(int progress, int pulse_pos);

@@ -704,6 +704,94 @@ void DrawingEngine::DrawBorder() const
     cairo_stroke(m_cr);
 }
 
+void DrawingEngine::DrawStockCloseIcon()
+{
+    int x = m_rc->x + (m_rc->width) / 2;
+    int y = m_rc->y + (m_rc->height) / 2;
+    int half_width = m_ds->metrics()->value(Metrics::IconWidth) / 2;
+    int half_height = m_ds->metrics()->value(Metrics::IconHeight) / 2;
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Primitive);
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::PrimitiveWidth));
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_NONE);
+    cairo_move_to(m_cr, x, y);
+    cairo_line_to(m_cr, x + half_width, y + half_height);
+    cairo_move_to(m_cr, x, y);
+    cairo_line_to(m_cr, x + half_width, y - half_height);
+    cairo_move_to(m_cr, x, y);
+    cairo_line_to(m_cr, x - half_width, y + half_height);
+    cairo_move_to(m_cr, x, y);
+    cairo_line_to(m_cr, x - half_width, y - half_height);
+    cairo_stroke(m_cr);
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_DEFAULT);
+}
+
+void DrawingEngine::DrawStockMinimizeIcon()
+{
+    int x = m_rc->x + (m_rc->width - m_ds->metrics()->value(Metrics::IconWidth)) / 2;
+    int y = m_rc->y + (m_rc->height - m_ds->metrics()->value(Metrics::IconHeight)) / 2;
+    int half_height = m_ds->metrics()->value(Metrics::IconHeight) / 2;
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Primitive);
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::PrimitiveWidth));
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_NONE);
+    cairo_move_to(m_cr, x, y + half_height);
+    cairo_line_to(m_cr, x + m_ds->metrics()->value(Metrics::IconWidth), y + half_height);
+    cairo_stroke(m_cr);
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_DEFAULT);
+}
+
+void DrawingEngine::DrawStockMaximizeIcon()
+{
+    int x = m_rc->x + (m_rc->width - m_ds->metrics()->value(Metrics::IconWidth)) / 2;
+    int y = m_rc->y + (m_rc->height - m_ds->metrics()->value(Metrics::IconHeight)) / 2;
+    int quarterw = m_ds->metrics()->value(Metrics::IconWidth)/4;
+    int restw = m_ds->metrics()->value(Metrics::IconWidth) - quarterw;
+    int quarterh = m_ds->metrics()->value(Metrics::IconHeight)/4;
+    int resth = m_ds->metrics()->value(Metrics::IconHeight) - quarterh;
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Primitive);
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::PrimitiveWidth));
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_NONE);
+    cairo_move_to(m_cr, x, y + quarterh);
+    cairo_line_to(m_cr, x + restw - 1, y + quarterh);
+    cairo_line_to(m_cr, x + restw - 1, y + m_ds->metrics()->value(Metrics::IconHeight) - 1);
+    cairo_line_to(m_cr, x, y + m_ds->metrics()->value(Metrics::IconHeight) - 1);
+    cairo_line_to(m_cr, x, y + quarterh + m_ds->metrics()->value(Metrics::PrimitiveWidth) - 1);
+    cairo_move_to(m_cr, x + quarterw, y + quarterh);
+    cairo_line_to(m_cr, x + quarterw, y);
+    cairo_line_to(m_cr, x + m_ds->metrics()->value(Metrics::IconWidth) - 1, y);
+    cairo_line_to(m_cr, x + m_ds->metrics()->value(Metrics::IconWidth) - 1, y + resth - 1);
+    cairo_line_to(m_cr, x + restw - 1, y + resth - 1);
+    cairo_stroke(m_cr);
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_DEFAULT);
+}
+
+void DrawingEngine::DrawStockRestoreIcon()
+{
+    int x = m_rc->x + (m_rc->width - m_ds->metrics()->value(Metrics::IconWidth)) / 2;
+    int y = m_rc->y + (m_rc->height - m_ds->metrics()->value(Metrics::IconHeight)) / 2;
+
+    COLORREF rgb = m_ds->palette()->color(Palette::Primitive);
+    cairo_set_line_width(m_cr, m_ds->metrics()->value(Metrics::PrimitiveWidth));
+    cairo_set_source_rgb(m_cr, GetRValue(rgb), GetGValue(rgb), GetBValue(rgb));
+
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_NONE);
+    cairo_move_to(m_cr, x, y);
+    cairo_line_to(m_cr, x + m_ds->metrics()->value(Metrics::IconWidth) - 1, y);
+    cairo_line_to(m_cr, x + m_ds->metrics()->value(Metrics::IconWidth) - 1, y + m_ds->metrics()->value(Metrics::IconHeight) - 1);
+    cairo_line_to(m_cr, x, y + m_ds->metrics()->value(Metrics::IconHeight) - 1);
+    cairo_line_to(m_cr, x, y + m_ds->metrics()->value(Metrics::PrimitiveWidth) - 1);
+    cairo_stroke(m_cr);
+    cairo_set_antialias(m_cr, CAIRO_ANTIALIAS_DEFAULT);
+}
+
 void DrawingEngine::End()
 {
     m_rc = nullptr;

@@ -8,10 +8,10 @@
 class AbstractButton : public Widget
 {
 public:
-    AbstractButton(Widget *parent = nullptr, const std::wstring &text = L"");
+    AbstractButton(Widget *parent = nullptr, const tstring &text = tstring());
     virtual ~AbstractButton();
 
-    void setText(const std::wstring &text);
+    void setText(const tstring &text);
 
     /* callback */
     int onClick(const FnVoidVoid &callback);
@@ -25,7 +25,7 @@ protected:
 #endif
     virtual void click();
 
-    std::wstring m_text;
+    tstring m_text;
 
 private:
     std::unordered_map<int, FnVoidVoid> m_click_callbacks;

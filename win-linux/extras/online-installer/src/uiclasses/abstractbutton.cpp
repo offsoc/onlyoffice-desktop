@@ -2,7 +2,7 @@
 #include "palette.h"
 
 
-AbstractButton::AbstractButton(Widget *parent, const std::wstring &text) :
+AbstractButton::AbstractButton(Widget *parent, const tstring &text) :
     Widget(parent, ObjectType::WidgetType),
     m_text(text)
 {
@@ -14,7 +14,7 @@ AbstractButton::~AbstractButton()
 
 }
 
-void AbstractButton::setText(const std::wstring &text)
+void AbstractButton::setText(const tstring &text)
 {
     m_text = text;
     update();

@@ -3,7 +3,8 @@
 #include "drawningengine.h"
 #include "metrics.h"
 #include "palette.h"
-#include <windowsx.h>
+#ifdef _WIN32
+# include <windowsx.h>
 
 
 static bool isArrangingAllowed() {
@@ -11,21 +12,27 @@ static bool isArrangingAllowed() {
     SystemParametersInfoA(SPI_GETWINARRANGING, 0, &arranging, 0);
     return (arranging == TRUE);
 }
+#endif
 
-Button::Button(Widget *parent, const std::wstring &text) :
+Button::Button(Widget *parent, const tstring &text) :
     AbstractButton(parent, text),
+    m_stockIcon(StockIcon::None),
+#ifdef _WIN32
     m_hIcon(nullptr),
     m_hMetaFile(nullptr),
-    m_stockIcon(StockIcon::None),
     supportSnapLayouts(false),
     snapLayoutAllowed(false),
     snapLayoutTimerIsSet(false)
+#else
+    m_pb(nullptr)
+#endif
 {
 
 }
 
 Button::~Button()
 {
+#ifdef _WIN32
     if (m_hIcon) {
         DestroyIcon(m_hIcon);
         m_hIcon = nullptr;
@@ -35,20 +42,35 @@ Button::~Button()
         DeleteEnhMetaFile(m_hMetaFile);
         m_hMetaFile = nullptr;
     }
+#else
+    if (m_pb) {
+        g_object_unref(m_pb);
+        m_pb = nullptr;
+    }
+#endif
 }
 
-void Button::setIcon(const std::wstring &path, int w, int h)
+void Button::setIcon(const tstring &path, int w, int h)
 {
+    metrics()->setMetrics(Metrics::IconWidth, w);
+    metrics()->setMetrics(Metrics::IconHeight, h);
+#ifdef _WIN32
     if (m_hIcon) {
         DestroyIcon(m_hIcon);
         m_hIcon = nullptr;
     }
-    metrics()->setMetrics(Metrics::IconWidth, w);
-    metrics()->setMetrics(Metrics::IconHeight, h);
     m_hIcon = (HICON)LoadImage(NULL, path.c_str(), IMAGE_ICON, w, h, LR_LOADFROMFILE | LR_DEFAULTCOLOR | LR_SHARED);
+#else
+    if (m_pb) {
+        g_object_unref(m_pb);
+        m_pb = nullptr;
+    }
+    m_pb = gdk_pixbuf_new_from_resource_at_scale(path.c_str(), w, h, TRUE, NULL);
+#endif
     update();
 }
 
+#ifdef _WIN32
 void Button::setIcon(int id, int w, int h)
 {
     if (m_hIcon) {
@@ -99,19 +121,20 @@ void Button::setEMFIcon(int id, int w, int h)
     update();
 }
 
-void Button::setIconSize(int w, int h)
-{
-    metrics()->setMetrics(Metrics::IconWidth, w);
-    metrics()->setMetrics(Metrics::IconHeight, h);
-    update();
-}
-
 void Button::setSupportSnapLayouts()
 {
     if (Utils::getWinVersion() > Utils::WinVer::Win10) {
         snapLayoutAllowed = isArrangingAllowed();
         supportSnapLayouts = true;
     }
+}
+#endif
+
+void Button::setIconSize(int w, int h)
+{
+    metrics()->setMetrics(Metrics::IconWidth, w);
+    metrics()->setMetrics(Metrics::IconHeight, h);
+    update();
 }
 
 void Button::setStockIcon(StockIcon stockIcon)
@@ -120,6 +143,7 @@ void Button::setStockIcon(StockIcon stockIcon)
     update();
 }
 
+#ifdef _WIN32
 bool Button::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
 {
     switch (msg) {
@@ -195,3 +219,42 @@ bool Button::event(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *result)
     }
     return AbstractButton::event(msg, wParam, lParam, result);
 }
+#else
+bool Button::event(GdkEventType ev_type, void *param)
+{
+    switch (ev_type) {
+    case GDK_DRAW_CUSTOM: {
+        Rect rc(0, 0, gtk_widget_get_allocated_width(m_hWnd), gtk_widget_get_allocated_height(m_hWnd));
+
+        engine()->Begin(this, (cairo_t*)param, &rc);
+        engine()->FillBackground();
+        // engine()->DrawRoundedRect();
+        if (metrics()->value(Metrics::BorderWidth) != 0)
+            engine()->DrawBorder();
+        if (m_pb)
+            engine()->DrawIcon(m_pb);
+        if (!m_text.empty())
+            engine()->DrawText(rc, m_text);
+
+        if (m_stockIcon == StockIcon::CloseIcon)
+            engine()->DrawStockCloseIcon();
+        else
+        if (m_stockIcon == StockIcon::RestoreIcon)
+            engine()->DrawStockRestoreIcon();
+        else
+        if (m_stockIcon == StockIcon::MinimizeIcon)
+            engine()->DrawStockMinimizeIcon();
+        else
+        if (m_stockIcon == StockIcon::MaximizeIcon)
+            engine()->DrawStockMaximizeIcon();
+
+        engine()->End();
+        return false;
+    }
+
+    default:
+        break;
+    }
+    return AbstractButton::event(ev_type, param);
+}
+#endif
