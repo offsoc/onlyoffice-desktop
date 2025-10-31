@@ -2088,6 +2088,9 @@
         
         tab.uuid = [NSString stringWithFormat:@"%ld", (long)cefView.uuid];
         
+        // Store the cefView reference in params for later access
+        tab.params[@"view"] = cefView;
+        
         NSTabViewItem * item = [[NSTabViewItem alloc] initWithIdentifier:tab.uuid];
         item.label = tab.title;
         [self.tabView addTabViewItem:item];
@@ -2115,13 +2118,18 @@
 }
 
 - (void)tabs:(ASCTabsControl *)control didRemovedTab:(ASCTabView *)tab {
-    CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
-    appManager->DestroyCefView([tab.uuid intValue]);
+    // Check if tab was detached to another window - if so, don't destroy the view
+    BOOL isDetached = [tab.params[@"detached"] boolValue];
     
-    NSCefView * cefView = [self cefViewWithTab:tab];
-    
-    if (cefView) {
-        [cefView internalClean];
+    if (!isDetached) {
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+        appManager->DestroyCefView([tab.uuid intValue]);
+        
+        NSCefView * cefView = [self cefViewWithTab:tab];
+        
+        if (cefView) {
+            [cefView internalClean];
+        }
     }
     
     [self.tabView removeTabViewItem:[self.tabView tabViewItemAtIndex:[self.tabView indexOfTabViewItemWithIdentifier:tab.uuid]]];

@@ -40,6 +40,7 @@
 
 #import "ASCTitleBarController.h"
 #import "ASCTitleWindow.h"
+#import "ASCTitleWindowController.h"
 #import "ASCConstants.h"
 #import "NSView+Extensions.h"
 #import "NSColor+Extensions.h"
@@ -54,6 +55,7 @@
 #import "ASCApplicationManager.h"
 #import "ASCLinguist.h"
 #import "NSWindow+Extensions.h"
+#import "NSCefView.h"
 
 
 static float kASCWindowDefaultTrafficButtonsLeftMargin = 0;
@@ -532,6 +534,46 @@ static float kASCRTLTabsRightMargin = 0;
         [self.portalButton setState:NSControlStateValueOn];
         [self.portalButton setImage:[NSImage imageNamed:[ASCThemesController isCurrentThemeDark] ? @"logo-tab-light" : @"logo-tab-dark"]];
     }
+}
+
+- (void)tabs:(ASCTabsControl *)control didDetachTab:(ASCTabView *)tab atScreenPoint:(NSPoint)screenPoint withEvent:(NSEvent *)event {
+    NSView *webView = tab.params[@"view"];
+    if (!webView || ![webView isKindOfClass:[NSCefView class]]) {
+        NSLog(@"Warning: no WebView found in tab params, cannot detach");
+        return;
+    }
+    
+    NSStoryboard *storyboard = [NSStoryboard storyboardWithName:@"Separate-Editor" bundle:nil];
+    NSWindowController *windowController = [storyboard instantiateControllerWithIdentifier:@"EditorWindowController"];
+    NSWindow *editorWindow = windowController.window;
+
+    if (tab.title && tab.title.length > 0) {
+        [editorWindow setTitle:tab.title];
+    }
+    
+    NSViewController *contentViewController = windowController.contentViewController;
+    if (contentViewController && contentViewController.view) {
+        [webView removeFromSuperview];
+        webView.frame = contentViewController.view.bounds;
+        webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+        [contentViewController.view addSubview:webView];
+        NSLog(@"Tab detached: WebView moved to new window");
+    }
+    
+    // Mark tab as detached to prevent view destruction in didRemovedTab
+    tab.params[@"detached"] = @YES;
+    [control removeTab:tab];
+    
+    NSWindow * mainWindow = [NSWindow titleWindowOrMain];
+    NSSize size = [mainWindow frame].size;
+    NSRect windowFrame = NSMakeRect(screenPoint.x - 200, screenPoint.y - size.height + 11, size.width, size.height);
+    [editorWindow setFrame:windowFrame display:NO];
+    [editorWindow makeKeyAndOrderFront:nil];
+
+    // Let the event loop process before starting drag to prevent window jerking
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [editorWindow performWindowDragWithEvent:event];
+    });
 }
 
 #pragma mark -
