@@ -80,6 +80,7 @@ static NSString * const ASCAnalyticsCategoryApplication     = @"Application";
 
 // Storyboard
 static NSString * const StoryboardNameMain                  = @"Main";
+static NSString * const StoryboardNameEditor                = @"Separate-Editor";
 static NSString * const StoryboardNameReporter              = @"Presentation-Reporter";
 static NSString * const StoryboardNameSign                  = @"Document-Sign";
 

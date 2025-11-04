@@ -543,9 +543,12 @@ static float kASCRTLTabsRightMargin = 0;
         return;
     }
     
-    NSStoryboard *storyboard = [NSStoryboard storyboardWithName:@"Separate-Editor" bundle:nil];
-    NSWindowController *windowController = [storyboard instantiateControllerWithIdentifier:@"EditorWindowController"];
-    NSWindow *editorWindow = windowController.window;
+    NSWindow * mainWindow = self.view.window;
+    NSSize size = [mainWindow frame].size;
+    NSRect windowFrame = NSMakeRect(screenPoint.x - 200, screenPoint.y - size.height + 11, size.width, size.height);
+    
+    ASCEditorWindowController *windowController = [ASCEditorWindowController initWithFrame:windowFrame];
+    ASCEditorWindow *editorWindow = (ASCEditorWindow *)windowController.window;
 
     if (tab.title && tab.title.length > 0) {
         [editorWindow setTitle:tab.title];
@@ -554,6 +557,7 @@ static float kASCRTLTabsRightMargin = 0;
     NSViewController *contentViewController = windowController.contentViewController;
     if (contentViewController && contentViewController.view) {
         [webView removeFromSuperview];
+        editorWindow.webView = webView;
         webView.frame = contentViewController.view.bounds;
         webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
         [contentViewController.view addSubview:webView];
@@ -564,10 +568,6 @@ static float kASCRTLTabsRightMargin = 0;
     tab.params[@"detached"] = @YES;
     [control removeTab:tab];
     
-    NSWindow * mainWindow = [NSWindow titleWindowOrMain];
-    NSSize size = [mainWindow frame].size;
-    NSRect windowFrame = NSMakeRect(screenPoint.x - 200, screenPoint.y - size.height + 11, size.width, size.height);
-    [editorWindow setFrame:windowFrame display:NO];
     [editorWindow makeKeyAndOrderFront:nil];
 
     // Let the event loop process before starting drag to prevent window jerking
