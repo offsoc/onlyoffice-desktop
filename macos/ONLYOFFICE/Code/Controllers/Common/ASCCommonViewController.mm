@@ -1960,6 +1960,22 @@
 
 - (void)tabs:(ASCTabsControl *)control didAddTab:(ASCTabView *)tab {
     if (tab.params) {
+        BOOL isReattaching = [tab.params[@"isReattaching"] boolValue];
+        NSCefView *existingCefView = tab.params[@"view"];
+        
+        if (isReattaching && existingCefView && [existingCefView isKindOfClass:[NSCefView class]]) {
+            tab.uuid = [NSString stringWithFormat:@"%ld", (long)existingCefView.uuid];
+            
+            NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:tab.uuid];
+            item.label = tab.title;
+            [self.tabView addTabViewItem:item];
+            [item.view addSubview:existingCefView];
+            [existingCefView autoPinEdgesToSuperviewEdges];
+            
+            [self tabView:self.tabView dimTabViewItem:item];
+            return;
+        }
+        
         CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
         NSCefView * cefView = [[NSCefView alloc] initWithFrame:CGRectZero];
         

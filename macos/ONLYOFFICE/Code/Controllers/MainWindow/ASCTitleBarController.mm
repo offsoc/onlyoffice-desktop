@@ -622,24 +622,13 @@ static float kASCRTLTabsRightMargin = 0;
     
     ASCTabView *tab = [[ASCTabView alloc] initWithFrame:CGRectZero];
     tab.title       = window.title;
-    tab.type        = ASCTabViewTypeUnknown;
-    tab.uuid = [NSString stringWithFormat:@"%ld", (long)webView.uuid];
-    if (!tab.params) {
-        tab.params = [NSMutableDictionary dictionary];
-    }
+    tab.type        = ASCTabViewTypeDocument;
+    tab.params = [NSMutableDictionary dictionary];
+    tab.params[@"view"] = webView;
+    tab.params[@"action"] = @(ASCTabActionUnknown);
+    tab.params[@"isReattaching"] = @YES;
     
     [webView removeFromSuperview];
-    
-//    NSTabViewItem * item = [[NSTabViewItem alloc] initWithIdentifier:tab.uuid];
-//    item.label = tab.title;
-//    [self tabsView:self.tabView  addTabViewItem:item];
-//    [item.view addSubview:webView];
-//    [webView autoPinEdgesToSuperviewEdges];
-//    
-//    [self tabView:self.tabView dimTabViewItem:item];
-    
-    tab.params[@"view"] = webView;
-    
     [window close];
     [self.tabsControl addTab:tab selected:YES];
     NSLog(@"Tab attached to main window");
