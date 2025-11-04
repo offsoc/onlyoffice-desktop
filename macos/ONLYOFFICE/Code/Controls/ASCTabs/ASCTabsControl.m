@@ -545,11 +545,12 @@ static NSString * const kASCTabsMulticastDelegateKey = @"asctabsmulticastDelegat
         event = [self.window nextEventMatchingMask:NSEventMaskLeftMouseDragged | NSEventMaskLeftMouseUp];
         
         CGFloat scrollPosition = [[self.scrollView contentView] documentVisibleRect].origin.x;
-        NSPoint windowPoint = event.locationInWindow;
-        NSPoint controlPoint = [self convertPoint:windowPoint fromView:nil];
         
         // Check for tab detachment when cursor exits above or below the component
         if (event.type == NSEventTypeLeftMouseDragged) {
+            NSPoint windowPoint = event.locationInWindow;
+            NSPoint controlPoint = [self convertPoint:windowPoint fromView:nil];
+
             BOOL isAboveControl = controlPoint.y > NSMaxY(self.bounds) + kDetachmentThreshold;
             BOOL isBelowControl = controlPoint.y < NSMinY(self.bounds) - kDetachmentThreshold;
             if (isAboveControl || isBelowControl) {
