@@ -53,6 +53,8 @@
 #import "ASCMenuButtonCell.h"
 #import "ASCThemesController.h"
 #import "ASCApplicationManager.h"
+#import "ASCEditorWindowController.h"
+#import "ASCEditorWindow.h"
 #import "ASCLinguist.h"
 #import "NSWindow+Extensions.h"
 #import "NSCefView.h"
@@ -62,7 +64,12 @@ static float kASCWindowDefaultTrafficButtonsLeftMargin = 0;
 static float kASCWindowMinTitleWidth = 0;
 static float kASCRTLTabsRightMargin = 0;
 
-@interface ASCTitleBarController ()  <ASCTabsControlDelegate, ASCDownloadControllerDelegate>
+@interface ASCTitleBarController ()  <ASCTabsControlDelegate, ASCDownloadControllerDelegate> {
+    NSWindow *dropEditorWindow;
+    NSTimer *dropTimer;
+    BOOL dropTimerActive;
+    NSPoint lastCursorPos;
+}
 @property (nonatomic) NSArray *standardButtonsDefaults;
 @property (nonatomic) NSArray *standardButtonsFullscreen;
 
@@ -172,6 +179,11 @@ static float kASCRTLTabsRightMargin = 0;
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(onWindowSetFrame:)
                                                  name:ASCEventNameMainWindowSetFrame
+                                               object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(onEditorWindowMoving:)
+                                                 name:ASCEventNameEditorWindowMoving
                                                object:nil];
     
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -602,5 +614,105 @@ static float kASCRTLTabsRightMargin = 0;
     }
 }
 
+#pragma mark -
+#pragma mark Tab Attachment Support
+
+- (void)attachWindow:(ASCEditorWindow *)window atPoint:(NSPoint)screenPoint {
+    NSCefView *webView =  (NSCefView *)window.webView;
+    
+    ASCTabView *tab = [[ASCTabView alloc] initWithFrame:CGRectZero];
+    tab.title       = window.title;
+    tab.type        = ASCTabViewTypeUnknown;
+    tab.uuid = [NSString stringWithFormat:@"%ld", (long)webView.uuid];
+    if (!tab.params) {
+        tab.params = [NSMutableDictionary dictionary];
+    }
+    
+    [webView removeFromSuperview];
+    
+//    NSTabViewItem * item = [[NSTabViewItem alloc] initWithIdentifier:tab.uuid];
+//    item.label = tab.title;
+//    [self tabsView:self.tabView  addTabViewItem:item];
+//    [item.view addSubview:webView];
+//    [webView autoPinEdgesToSuperviewEdges];
+//    
+//    [self tabView:self.tabView dimTabViewItem:item];
+    
+    tab.params[@"view"] = webView;
+    
+    [window close];
+    [self.tabsControl addTab:tab selected:YES];
+    NSLog(@"Tab attached to main window");
+}
+
+- (void)handleDropTimer {
+    NSPoint currentCursor = [NSEvent mouseLocation];
+    if ([self canPinTabAtPoint:currentCursor]) {
+        if (NSEqualPoints(currentCursor, lastCursorPos)) {
+            [self stopDropTimer];
+
+            NSEventMask buttons = [NSEvent pressedMouseButtons];
+            if (buttons & (1 << 0)) { // Left button pressed
+                ASCEditorWindow *editorWindow = (ASCEditorWindow *)dropEditorWindow;
+                [self attachWindow:editorWindow atPoint:currentCursor];
+            }
+        } else {
+            lastCursorPos = currentCursor;
+        }
+    } else {
+        [self stopDropTimer];
+    }
+}
+
+- (void)stopDropTimer {
+    if (dropTimer && [dropTimer isValid]) {
+        [dropTimer invalidate];
+    }
+    dropTimer = nil;
+    dropTimerActive = NO;
+}
+
+- (void)validateDrop:(NSWindow *)editorWindow {
+    NSWindow *mainWindow = self.view.window;
+    if (mainWindow && mainWindow.isVisible && !mainWindow.isMiniaturized) {
+        dropEditorWindow = editorWindow;
+        
+        if (!dropTimer) {
+            dropTimer = [NSTimer timerWithTimeInterval:0.3
+                                                target:self
+                                              selector:@selector(handleDropTimer)
+                                              userInfo:nil
+                                               repeats:YES];
+        }
+        
+        NSPoint pos = [NSEvent mouseLocation];
+        if ([self canPinTabAtPoint:pos]) {
+            if (!dropTimerActive) {
+                [[NSRunLoop currentRunLoop] addTimer:dropTimer forMode:NSRunLoopCommonModes];
+                dropTimerActive = YES;
+            }
+            lastCursorPos = pos;
+        } else {
+            [self stopDropTimer];
+        }
+    }
+}
+
+- (BOOL)canPinTabAtPoint:(NSPoint)screenPoint {
+    NSWindow * mainWindow = self.view.window;
+    NSRect windowFrame = mainWindow.frame;
+    if (!NSPointInRect(screenPoint, windowFrame)) {
+        return false;
+    }
+    NSRect contentRect = [mainWindow contentRectForFrameRect:windowFrame];
+    NSRect titleBarRect = NSMakeRect(windowFrame.origin.x, contentRect.origin.y + contentRect.size.height,
+                                     windowFrame.size.width, windowFrame.size.height - contentRect.size.height);
+    return NSPointInRect(screenPoint, titleBarRect);
+}
+
+- (void)onEditorWindowMoving:(NSNotification *)notification {
+    NSWindow *editorWindow = notification.object;
+    [self validateDrop:editorWindow];
+}
 
 @end
