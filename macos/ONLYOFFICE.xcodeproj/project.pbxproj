@@ -102,6 +102,12 @@
 		BE6251BA22BD089100656116 /* dictionaries in Resources */ = {isa = PBXBuildFile; fileRef = BE6251B922BD089100656116 /* dictionaries */; };
 		BE9A63CD2E2A429F0040CE84 /* ascdocumentscore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9A63CC2E2A429F0040CE84 /* ascdocumentscore.framework */; };
 		BE9A63CF2E2A42A60040CE84 /* ooxmlsignature.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9A63CE2E2A42A60040CE84 /* ooxmlsignature.framework */; };
+		F12F85D32EB6A38400370877 /* ASCEditorWindowController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */; };
+		F12F85D42EB6A38400370877 /* ASCEditorWindowController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */; };
+		F12F85D52EB6A38400370877 /* ASCEditorWindowController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */; };
+		F14CD3C32EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
+		F14CD3C42EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
+		F14CD3C52EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
 		F1AC69612EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
 		F1AC69622EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
 		F1AC69632EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
@@ -832,6 +838,10 @@
 		BE95F0A623E9FF590045E0CB /* mac_cefview.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mac_cefview.h; sourceTree = "<group>"; };
 		BE9A63CC2E2A429F0040CE84 /* ascdocumentscore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ascdocumentscore.framework; path = ../../build_tools/out/mac_arm64/onlyoffice/desktopeditors/ascdocumentscore.framework; sourceTree = "<group>"; };
 		BE9A63CE2E2A42A60040CE84 /* ooxmlsignature.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ooxmlsignature.framework; path = ../../build_tools/out/mac_arm64/onlyoffice/desktopeditors/ooxmlsignature.framework; sourceTree = "<group>"; };
+		F12F85D12EB6A38400370877 /* ASCEditorWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCEditorWindowController.h; sourceTree = "<group>"; };
+		F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASCEditorWindowController.mm; sourceTree = "<group>"; };
+		F14CD3C12EB73EBC00D476FE /* ASCEditorWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCEditorWindow.h; sourceTree = "<group>"; };
+		F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASCEditorWindow.m; sourceTree = "<group>"; };
 		F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Separate-Editor.storyboard"; sourceTree = "<group>"; };
 		FC033D251BB13B9900F6C55F /* mac_application.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mac_application.h; sourceTree = "<group>"; };
 		FC035A5B24855E8C00AF820F /* ASCTabViewType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ASCTabViewType.h; sourceTree = "<group>"; };
@@ -1161,6 +1171,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F12F85D02EB6A38400370877 /* EditorWindow */ = {
+			isa = PBXGroup;
+			children = (
+				F14CD3C12EB73EBC00D476FE /* ASCEditorWindow.h */,
+				F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */,
+				F12F85D12EB6A38400370877 /* ASCEditorWindowController.h */,
+				F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */,
+			);
+			path = EditorWindow;
+			sourceTree = "<group>";
+		};
 		FC035A5A24855E1900AF820F /* Enums */ = {
 			isa = PBXGroup;
 			children = (
@@ -1696,6 +1717,7 @@
 		FCF289722150E6A1002FD438 /* Controllers */ = {
 			isa = PBXGroup;
 			children = (
+				F12F85D02EB6A38400370877 /* EditorWindow */,
 				FCF289742150E820002FD438 /* Common */,
 				FCF289762150E904002FD438 /* MainWindow */,
 				FCF289782150E95F002FD438 /* About */,
@@ -2363,6 +2385,7 @@
 				FC0BD68C258B63F700C47F95 /* AnalyticsEvent.m in Sources */,
 				FC0BD68D258B63F700C47F95 /* ASCTitleWindowController.mm in Sources */,
 				FC0BD68E258B63F700C47F95 /* NSDictionary+Extensions.m in Sources */,
+				F12F85D52EB6A38400370877 /* ASCEditorWindowController.mm in Sources */,
 				FC0BD68F258B63F700C47F95 /* ASCExternalController.m in Sources */,
 				FC0BD690258B63F700C47F95 /* PFMoveApplication.m in Sources */,
 				FC0BD691258B63F700C47F95 /* ASCBlockHolder.m in Sources */,
@@ -2383,6 +2406,7 @@
 				FC0BD69D258B63F700C47F95 /* AnalyticsHelper.m in Sources */,
 				FC2C43B125D46D66003A39C4 /* ASCCertificateQLPreviewController.m in Sources */,
 				FC0BD69E258B63F700C47F95 /* NSLayoutConstraint+PureLayout.m in Sources */,
+				F14CD3C52EB73EBC00D476FE /* ASCEditorWindow.m in Sources */,
 				FC0BD69F258B63F700C47F95 /* ASCTabsScrubberSelectionView.m in Sources */,
 				FC0BD6A0258B63F700C47F95 /* ASCDocumentSignatureController.m in Sources */,
 				FC0BD6A1258B63F700C47F95 /* ASCPopoverLightView.m in Sources */,
@@ -2438,6 +2462,7 @@
 				FCB4C6C326DD018B0012C20D /* AnalyticsEvent.m in Sources */,
 				FCB4C6C426DD018B0012C20D /* ASCTitleWindowController.mm in Sources */,
 				FCB4C6C526DD018B0012C20D /* NSDictionary+Extensions.m in Sources */,
+				F12F85D32EB6A38400370877 /* ASCEditorWindowController.mm in Sources */,
 				FCB4C6C626DD018B0012C20D /* ASCExternalController.m in Sources */,
 				FCB4C6C726DD018B0012C20D /* PFMoveApplication.m in Sources */,
 				FCB4C6C826DD018B0012C20D /* ASCBlockHolder.m in Sources */,
@@ -2458,6 +2483,7 @@
 				FCB4C6D526DD018B0012C20D /* AnalyticsHelper.m in Sources */,
 				FCB4C6D626DD018B0012C20D /* ASCCertificateQLPreviewController.m in Sources */,
 				FCB4C6D726DD018B0012C20D /* NSLayoutConstraint+PureLayout.m in Sources */,
+				F14CD3C32EB73EBC00D476FE /* ASCEditorWindow.m in Sources */,
 				FCB4C6D826DD018B0012C20D /* ASCTabsScrubberSelectionView.m in Sources */,
 				FCB4C6D926DD018B0012C20D /* ASCDocumentSignatureController.m in Sources */,
 				FCB4C6DA26DD018B0012C20D /* ASCPopoverLightView.m in Sources */,
@@ -2513,6 +2539,7 @@
 				FCFE61E21CAD02D4000D2418 /* AnalyticsEvent.m in Sources */,
 				FCA9A1961BA6DE2700ABF3AB /* ASCTitleWindowController.mm in Sources */,
 				FC64391B21B52E5800A25CD1 /* NSDictionary+Extensions.m in Sources */,
+				F12F85D42EB6A38400370877 /* ASCEditorWindowController.mm in Sources */,
 				FCF2898121510C16002FD438 /* ASCExternalController.m in Sources */,
 				FCB454FF1C326A4E00FEACF2 /* PFMoveApplication.m in Sources */,
 				FCCC2FD721E5DF7700FB9209 /* ASCBlockHolder.m in Sources */,
@@ -2533,6 +2560,7 @@
 				FCFE61E51CAD02D4000D2418 /* AnalyticsHelper.m in Sources */,
 				FC2C43B025D46D66003A39C4 /* ASCCertificateQLPreviewController.m in Sources */,
 				FCE7D166207D002700642010 /* NSLayoutConstraint+PureLayout.m in Sources */,
+				F14CD3C42EB73EBC00D476FE /* ASCEditorWindow.m in Sources */,
 				FCCC2FE221E5E10D00FB9209 /* ASCTabsScrubberSelectionView.m in Sources */,
 				FC8AA3152084C52500549F2D /* ASCDocumentSignatureController.m in Sources */,
 				FC1127591BBAAC8000AA3648 /* ASCPopoverLightView.m in Sources */,
