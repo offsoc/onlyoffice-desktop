@@ -108,6 +108,9 @@
 		F14CD3C32EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
 		F14CD3C42EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
 		F14CD3C52EB73EBC00D476FE /* ASCEditorWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */; };
+		F15C17322EBCA75000D266C7 /* NSCefData.mm in Sources */ = {isa = PBXBuildFile; fileRef = F15C17312EBCA75000D266C7 /* NSCefData.mm */; };
+		F15C17332EBCA75000D266C7 /* NSCefData.mm in Sources */ = {isa = PBXBuildFile; fileRef = F15C17312EBCA75000D266C7 /* NSCefData.mm */; };
+		F15C17342EBCA75000D266C7 /* NSCefData.mm in Sources */ = {isa = PBXBuildFile; fileRef = F15C17312EBCA75000D266C7 /* NSCefData.mm */; };
 		F1AC69612EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
 		F1AC69622EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
 		F1AC69632EB3883900270F8D /* Separate-Editor.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */; };
@@ -842,6 +845,8 @@
 		F12F85D22EB6A38400370877 /* ASCEditorWindowController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ASCEditorWindowController.mm; sourceTree = "<group>"; };
 		F14CD3C12EB73EBC00D476FE /* ASCEditorWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ASCEditorWindow.h; sourceTree = "<group>"; };
 		F14CD3C22EB73EBC00D476FE /* ASCEditorWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ASCEditorWindow.m; sourceTree = "<group>"; };
+		F15C17302EBCA75000D266C7 /* NSCefData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSCefData.h; sourceTree = "<group>"; };
+		F15C17312EBCA75000D266C7 /* NSCefData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NSCefData.mm; sourceTree = "<group>"; };
 		F1AC69602EB3883900270F8D /* Separate-Editor.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Separate-Editor.storyboard"; sourceTree = "<group>"; };
 		FC033D251BB13B9900F6C55F /* mac_application.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mac_application.h; sourceTree = "<group>"; };
 		FC035A5B24855E8C00AF820F /* ASCTabViewType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ASCTabViewType.h; sourceTree = "<group>"; };
@@ -1733,6 +1738,8 @@
 		FCF289732150E737002FD438 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				F15C17302EBCA75000D266C7 /* NSCefData.h */,
+				F15C17312EBCA75000D266C7 /* NSCefData.mm */,
 				FC98BAD41BAC43B400747944 /* NSCefView.h */,
 				FC98BAD51BAC43B400747944 /* NSCefView.mm */,
 				FCA0B3501B9F002B0073EDD4 /* ASCTitleBackground.h */,
@@ -2445,6 +2452,7 @@
 				FC0BD6BE258B63F700C47F95 /* NSArray+PureLayout.m in Sources */,
 				FC0BD6BF258B63F700C47F95 /* SFBPopoverWindowFrame.m in Sources */,
 				FC0BD6C0258B63F700C47F95 /* ASCTabViewCell.m in Sources */,
+				F15C17342EBCA75000D266C7 /* NSCefData.mm in Sources */,
 				FC0BD6C1258B63F700C47F95 /* ASCReplacePresentationAnimator.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2522,6 +2530,7 @@
 				FCB4C6FA26DD018B0012C20D /* NSArray+PureLayout.m in Sources */,
 				FCB4C6FB26DD018B0012C20D /* SFBPopoverWindowFrame.m in Sources */,
 				FCB4C6FC26DD018B0012C20D /* ASCTabViewCell.m in Sources */,
+				F15C17322EBCA75000D266C7 /* NSCefData.mm in Sources */,
 				FCB4C6FD26DD018B0012C20D /* ASCReplacePresentationAnimator.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2599,6 +2608,7 @@
 				FCE7D16C207D002700642010 /* NSArray+PureLayout.m in Sources */,
 				FC3BFE021BBE83AB0040C904 /* SFBPopoverWindowFrame.m in Sources */,
 				FCC77C9A206CEE85001B7837 /* ASCTabViewCell.m in Sources */,
+				F15C17332EBCA75000D266C7 /* NSCefData.mm in Sources */,
 				FC8DDD3D1C31381B00A2AB22 /* ASCReplacePresentationAnimator.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
