@@ -63,6 +63,10 @@
     self.window.delegate = self;
 }
 
+- (void)windowDidMove:(NSNotification *)notification {
+    [[NSNotificationCenter defaultCenter] postNotificationName:ASCEventNameEditorWindowMoving object:self.window];
+}
+
 - (void)windowWillClose:(NSNotification *)notification {
     AppDelegate *app = (AppDelegate *)[NSApp delegate];
     [app.windowControllers removeObject:self];

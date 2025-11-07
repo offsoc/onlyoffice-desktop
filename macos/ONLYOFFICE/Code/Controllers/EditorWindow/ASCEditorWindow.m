@@ -69,21 +69,8 @@
     [super setFrame:frameRect display:flag];
 }
 
-- (void)windowDidMove:(NSNotification *)notification {
-    [[NSNotificationCenter defaultCenter] postNotificationName:ASCEventNameEditorWindowMoving object:self];
-}
-
 - (void)initialize {
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                          selector:@selector(windowDidMove:)
-                                          name:NSWindowDidMoveNotification
-                                          object:self];
-}
 
-- (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self
-                                          name:NSWindowDidMoveNotification
-                                          object:self];
 }
 
 @end
