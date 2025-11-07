@@ -55,6 +55,7 @@
 #import "ASCApplicationManager.h"
 #import "ASCEditorWindowController.h"
 #import "ASCEditorWindow.h"
+#import "AppDelegate.h"
 #import "ASCLinguist.h"
 #import "NSWindow+Extensions.h"
 #import "NSCefView.h"
@@ -560,6 +561,9 @@ static float kASCRTLTabsRightMargin = 0;
     NSRect windowFrame = NSMakeRect(screenPoint.x - 200, screenPoint.y - size.height + 11, size.width, size.height);
     
     ASCEditorWindowController *windowController = [ASCEditorWindowController initWithFrame:windowFrame];
+    AppDelegate *app = [NSApp delegate];
+    [app.windowControllers addObject:windowController];
+    
     ASCEditorWindow *editorWindow = (ASCEditorWindow *)windowController.window;
 
     if (tab.title && tab.title.length > 0) {

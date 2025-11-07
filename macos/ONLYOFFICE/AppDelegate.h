@@ -42,6 +42,6 @@
 #import "mac_application.h"
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
-
+@property (nonatomic) NSMutableArray *windowControllers;
 @end
 

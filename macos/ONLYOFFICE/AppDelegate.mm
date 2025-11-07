@@ -62,6 +62,7 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
+    self.windowControllers = [NSMutableArray array];
 #ifndef _MAS
     PFMoveToApplicationsFolderIfNecessary();
 #endif

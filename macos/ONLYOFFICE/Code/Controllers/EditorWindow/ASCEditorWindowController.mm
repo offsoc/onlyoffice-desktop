@@ -39,10 +39,11 @@
 
 #import "ASCEditorWindowController.h"
 #import "ASCEditorWindow.h"
+#import "AppDelegate.h"
 #import "ASCConstants.h"
 #import "ASCHelper.h"
 
-@interface ASCEditorWindowController ()
+@interface ASCEditorWindowController () <NSWindowDelegate>
 @end
 
 @implementation ASCEditorWindowController
@@ -59,6 +60,12 @@
     self.window.title = productName;
     
     [super windowDidLoad];
+    self.window.delegate = self;
+}
+
+- (void)windowWillClose:(NSNotification *)notification {
+    AppDelegate *app = (AppDelegate *)[NSApp delegate];
+    [app.windowControllers removeObject:self];
 }
 
 @end

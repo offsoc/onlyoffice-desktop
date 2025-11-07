@@ -39,6 +39,6 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface ASCEditorWindowController : NSWindowController
+@interface ASCEditorWindowController : NSWindowController <NSWindowDelegate>
 + (instancetype)initWithFrame:(NSRect)frame;
 @end
