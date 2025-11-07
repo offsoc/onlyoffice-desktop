@@ -40,5 +40,7 @@
 #import <Cocoa/Cocoa.h>
 
 @interface ASCEditorWindowController : NSWindowController <NSWindowDelegate>
+- (BOOL)shouldTerminateApplication;
+
 + (instancetype)initWithFrame:(NSRect)frame;
 @end

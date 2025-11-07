@@ -42,6 +42,8 @@
 #import "AppDelegate.h"
 #import "ASCConstants.h"
 #import "ASCHelper.h"
+#import "NSCefView.h"
+#import "NSCefData.h"
 
 @interface ASCEditorWindowController () <NSWindowDelegate>
 @end
@@ -70,6 +72,61 @@
 - (void)windowWillClose:(NSNotification *)notification {
     AppDelegate *app = (AppDelegate *)[NSApp delegate];
     [app.windowControllers removeObject:self];
+}
+
+- (BOOL)windowShouldClose:(NSWindow *)sender {
+    return [self shouldTerminateApplication];
+}
+
+- (BOOL)shouldTerminateApplication {
+    BOOL hasUnsaved = NO;
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:CEFEventNameFullscreen
+                                                        object:nil
+                                                      userInfo:@{@"fullscreen" : @(NO),
+                                                                 @"terminate"  : @(YES)
+                                                               }];
+    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+    NSCefView *cefView = (NSCefView *)window.webView;
+    if ([cefView.data hasChanges]) {
+        hasUnsaved = YES;
+    }
+    
+    // Blockchain check
+    if ([cefView checkCloudCryptoNeedBuild]) {
+        return NO;
+    } else {
+        if ([cefView isSaveLocked]) {
+            hasUnsaved = YES;
+        }
+    }
+    
+    if (hasUnsaved) {
+        NSString * productName = [ASCHelper appName];
+        
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert addButtonWithTitle:NSLocalizedString(@"Review Changes...", nil)];
+        [[alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)] setKeyEquivalent:@"\e"];
+        [alert addButtonWithTitle:NSLocalizedString(@"Delete and Quit", nil)];
+        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"You have %@ document with unconfirmed changes. Do you want to review these changes before quitting?", nil), productName]];
+        [alert setInformativeText:NSLocalizedString(@"If you don't review your documents, all your changeses will be lost.", nil)];
+        [alert setAlertStyle:NSAlertStyleInformational];
+        
+        NSInteger result = [alert runModal];
+        if (result == NSAlertFirstButtonReturn) {
+            // "Review Changes..." clicked
+            // TODO: add impl safeCloseTabsWithChanges;
+        } else
+        if (result == NSAlertSecondButtonReturn) {
+            // "Cancel" clicked
+            return NO;
+        } else {
+            // "Delete and Quit" clicked
+            // TODO: add impl removeTab;
+        }
+        return NO;
+    }
+    return YES;
 }
 
 @end

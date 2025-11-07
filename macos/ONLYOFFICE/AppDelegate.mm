@@ -41,6 +41,9 @@
 #import "AppDelegate.h"
 #import "ASCConstants.h"
 #import "ASCCommonViewController.h"
+#import "ASCEditorWindowController.h"
+#import "ASCEditorWindow.h"
+#import "ASCTitleWindow.h"
 #import "ASCSharedSettings.h"
 #import "ASCTabView.h"
 #import "NSString+Extensions.h"
@@ -56,6 +59,7 @@
 @interface AppDelegate ()
 @property (weak) IBOutlet NSMenuItem *updateMenuItem;
 @property (weak) IBOutlet NSMenuItem *eulaMenuItem;
+@property (nonatomic, assign) BOOL terminationAlreadyHandled;
 @end
 
 @implementation AppDelegate
@@ -262,14 +266,23 @@
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)theApplication {
-    NSWindow * mainWindow = [[NSApplication sharedApplication] mainWindow];
-    
-    if (mainWindow) {
-        ASCCommonViewController * controller = (ASCCommonViewController *)mainWindow.contentViewController;
-        
-        return [controller shouldTerminateApplication] ? NSTerminateNow : NSTerminateCancel;
+    if (self.terminationAlreadyHandled) {
+        return NSTerminateNow;
     }
 
+    for (NSWindow *window in theApplication.windows) {
+        if ([window isKindOfClass:[ASCTitleWindow class]]) {
+            ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
+            if (![controller shouldTerminateApplication])
+                return NSTerminateCancel;
+        } else
+        if ([window isKindOfClass:[ASCEditorWindow class]]) {
+            ASCEditorWindowController * controller = window.windowController;
+            if (![controller shouldTerminateApplication])
+                return NSTerminateCancel;
+        }
+    }
+    self.terminationAlreadyHandled = YES;
     return NSTerminateNow;
 }
 
