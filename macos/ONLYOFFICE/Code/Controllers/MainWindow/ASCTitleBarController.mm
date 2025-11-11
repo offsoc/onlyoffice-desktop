@@ -66,7 +66,6 @@ static float kASCWindowMinTitleWidth = 0;
 static float kASCRTLTabsRightMargin = 0;
 
 @interface ASCTitleBarController ()  <ASCTabsControlDelegate, ASCDownloadControllerDelegate> {
-    NSWindow *dropEditorWindow;
     NSTimer *dropTimer;
     BOOL dropTimerActive;
     NSPoint lastCursorPos;
@@ -74,6 +73,7 @@ static float kASCRTLTabsRightMargin = 0;
 @property (nonatomic) NSArray *standardButtonsDefaults;
 @property (nonatomic) NSArray *standardButtonsFullscreen;
 
+@property (nonatomic, weak) NSWindow *dropEditorWindow;
 @property (nonatomic, weak) NSButton *closeButtonFullscreen;
 @property (nonatomic, weak) NSButton *miniaturizeButtonFullscreen;
 @property (nonatomic, weak) NSButton *fullscreenButtonFullscreen;
@@ -550,7 +550,7 @@ static float kASCRTLTabsRightMargin = 0;
 }
 
 - (void)tabs:(ASCTabsControl *)control didDetachTab:(ASCTabView *)tab atScreenPoint:(NSPoint)screenPoint withEvent:(NSEvent *)event {
-    NSView *webView = tab.params[@"view"];
+    NSView *webView = tab.webView;
     if (!webView || ![webView isKindOfClass:[NSCefView class]]) {
         NSLog(@"Warning: no WebView found in tab params, cannot detach");
         return;
@@ -574,6 +574,7 @@ static float kASCRTLTabsRightMargin = 0;
     if (contentViewController && contentViewController.view) {
         [webView removeFromSuperview];
         editorWindow.webView = webView;
+        tab.webView = nil;
         webView.frame = contentViewController.view.bounds;
         webView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
         [contentViewController.view addSubview:webView];
@@ -623,18 +624,19 @@ static float kASCRTLTabsRightMargin = 0;
 
 - (void)attachWindow:(ASCEditorWindow *)window atPoint:(NSPoint)screenPoint {
     NSCefView *webView =  (NSCefView *)window.webView;
+    [webView removeFromSuperview];
     
     ASCTabView *tab = [[ASCTabView alloc] initWithFrame:CGRectZero];
     tab.title       = window.title;
     tab.type        = ASCTabViewTypeDocument;
+    tab.webView = webView;
     tab.params = [NSMutableDictionary dictionary];
-    tab.params[@"view"] = webView;
     tab.params[@"action"] = @(ASCTabActionUnknown);
     tab.params[@"isReattaching"] = @YES;
-    
-    [webView removeFromSuperview];
-    [window close];
     [self.tabsControl addTab:tab selected:YES];
+    
+    window.webView = nil;
+    [window performClose:nil];
     NSLog(@"Tab attached to main window");
 }
 
@@ -646,7 +648,7 @@ static float kASCRTLTabsRightMargin = 0;
 
             NSEventMask buttons = [NSEvent pressedMouseButtons];
             if (buttons & (1 << 0)) { // Left button pressed
-                ASCEditorWindow *editorWindow = (ASCEditorWindow *)dropEditorWindow;
+                ASCEditorWindow *editorWindow = (ASCEditorWindow *)self.dropEditorWindow;
                 [self attachWindow:editorWindow atPoint:currentCursor];
             }
         } else {
@@ -668,7 +670,7 @@ static float kASCRTLTabsRightMargin = 0;
 - (void)validateDrop:(NSWindow *)editorWindow {
     NSWindow *mainWindow = self.view.window;
     if (mainWindow && mainWindow.isVisible && !mainWindow.isMiniaturized) {
-        dropEditorWindow = editorWindow;
+        self.dropEditorWindow = editorWindow;
         
         if (!dropTimer) {
             dropTimer = [NSTimer timerWithTimeInterval:0.3

@@ -40,5 +40,5 @@
 #import <Cocoa/Cocoa.h>
 
 @interface ASCEditorWindow : NSWindow
-@property (nonatomic, strong) NSView *webView;
+@property (nonatomic, weak) NSView *webView;
 @end

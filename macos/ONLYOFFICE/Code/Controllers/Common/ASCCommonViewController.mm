@@ -1961,7 +1961,7 @@
 - (void)tabs:(ASCTabsControl *)control didAddTab:(ASCTabView *)tab {
     if (tab.params) {
         BOOL isReattaching = [tab.params[@"isReattaching"] boolValue];
-        NSCefView *existingCefView = tab.params[@"view"];
+        NSCefView *existingCefView = (NSCefView *)tab.webView;
         
         if (isReattaching && existingCefView && [existingCefView isKindOfClass:[NSCefView class]]) {
             tab.uuid = [NSString stringWithFormat:@"%ld", (long)existingCefView.uuid];
@@ -2105,7 +2105,7 @@
         tab.uuid = [NSString stringWithFormat:@"%ld", (long)cefView.uuid];
         
         // Store the cefView reference in params for later access
-        tab.params[@"view"] = cefView;
+        tab.webView = cefView;
         
         NSTabViewItem * item = [[NSTabViewItem alloc] initWithIdentifier:tab.uuid];
         item.label = tab.title;
