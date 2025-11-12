@@ -46,6 +46,7 @@
 #import "NSCefData.h"
 
 @interface ASCEditorWindowController () <NSWindowDelegate>
+@property (nonatomic) BOOL waitingForSaveCompleteToClose;
 @end
 
 @implementation ASCEditorWindowController
@@ -70,15 +71,27 @@
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
+    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+    NSCefView *cefView = (NSCefView *)window.webView;
+    if (cefView) {
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+        appManager->DestroyCefView((int)cefView.uuid);
+        [cefView internalClean];
+        window.webView = nil;
+    }
+    
     AppDelegate *app = (AppDelegate *)[NSApp delegate];
     [app.windowControllers removeObject:self];
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
-    return [self shouldTerminateApplication];
+    if (self.waitingForSaveCompleteToClose)
+        return NO;
+    
+    return [self shouldCloseWindow];
 }
 
-- (BOOL)shouldTerminateApplication {
+- (BOOL)shouldCloseWindow {
     BOOL hasUnsaved = NO;
     
     [[NSNotificationCenter defaultCenter] postNotificationName:CEFEventNameFullscreen
@@ -102,29 +115,44 @@
     }
     
     if (hasUnsaved) {
-        NSString * productName = [ASCHelper appName];
-        
-        NSAlert *alert = [[NSAlert alloc] init];
-        [alert addButtonWithTitle:NSLocalizedString(@"Review Changes...", nil)];
-        [[alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)] setKeyEquivalent:@"\e"];
-        [alert addButtonWithTitle:NSLocalizedString(@"Delete and Quit", nil)];
-        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"You have %@ document with unconfirmed changes. Do you want to review these changes before quitting?", nil), productName]];
-        [alert setInformativeText:NSLocalizedString(@"If you don't review your documents, all your changeses will be lost.", nil)];
-        [alert setAlertStyle:NSAlertStyleInformational];
-        
-        NSInteger result = [alert runModal];
-        if (result == NSAlertFirstButtonReturn) {
-            // "Review Changes..." clicked
-            // TODO: add impl safeCloseTabsWithChanges;
-        } else
-        if (result == NSAlertSecondButtonReturn) {
-            // "Cancel" clicked
+        if (![self requestSaveChanges]) {
             return NO;
-        } else {
-            // "Delete and Quit" clicked
-            // TODO: add impl removeTab;
         }
-        return NO;
+    }
+    return YES;
+}
+
+- (BOOL)requestSaveChanges {
+    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+    NSCefView *cefView = (NSCefView *)window.webView;
+
+    if (cefView) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
+        [alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)];
+        [[alert addButtonWithTitle:NSLocalizedString(@"Cancel", nil)] setKeyEquivalent:@"\e"];
+        [alert setMessageText:[NSString stringWithFormat:NSLocalizedString(@"Do you want to save the changes made to the document \"%@\"?", nil), [cefView.data title:YES]]];
+        [alert setInformativeText:NSLocalizedString(@"Your changes will be lost if you don't save them.", nil)];
+        [alert setAlertStyle:NSAlertStyleWarning];
+
+        NSInteger returnCode = [alert runModal];
+        if (returnCode == NSAlertFirstButtonReturn) {
+            // Save
+            NSEditorApi::CAscMenuEvent * pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_SAVE);
+            [cefView apply:pEvent];
+            
+            self.waitingForSaveCompleteToClose = YES;
+            return NO;
+
+        } else
+        if (returnCode == NSAlertSecondButtonReturn) {
+            // Don't Save
+
+        } else
+        if (returnCode == NSAlertThirdButtonReturn) {
+            // Cancel
+            return NO;
+        }
     }
     return YES;
 }
