@@ -91,6 +91,7 @@
 @property (nonatomic, assign) id <ASCExternalDelegate> externalDelegate;
 @property (nonatomic) ASCTouchBarController *touchBarController;
 @property (nonatomic) NSMutableArray<ASCTabView *> * tabsWithChanges;
+@property (nonatomic) BOOL isTabRemoving;
 @end
 
 @implementation ASCCommonViewController
@@ -1007,6 +1008,10 @@
                 }
             } else if ( keyCode == 87 ) { // W
                 if ( pData->get_IsCommandMac() ) {
+                    if (self.isTabRemoving) {
+                        return;
+                    }
+                    
                     ASCTabView * tab = [self.tabsControl selectedTab];
                     if ( tab and [self tabs:self.tabsControl willRemovedTab:tab] ) {
                         [self.tabsControl removeTab:tab];
@@ -1952,6 +1957,8 @@
             [self.tabView selectTabViewItemWithIdentifier:rootTabId];
         }
     }
+    
+    self.isTabRemoving = NO;
 }
 
 //- (void)tabs:(ASCTabsControl *)control didUpdateTab:(ASCTabView *)tab {
@@ -2111,6 +2118,8 @@
             return NO;
         }
     }
+    
+    self.isTabRemoving = YES;
     return YES;
 }
 
