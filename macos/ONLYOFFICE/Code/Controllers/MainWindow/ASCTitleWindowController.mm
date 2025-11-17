@@ -70,11 +70,20 @@
     ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
     NSEvent * event = [window currentEvent];
 
-//    BOOL isCommandKey = ([event modifierFlags] & NSCommandKeyMask) != 0;
+    BOOL isCommandKey = ([event modifierFlags] & NSCommandKeyMask) != 0;
 
-    if (event != nil && ((event.type != NSEventTypeLeftMouseUp) || event.window == nil)) {
-        if (![controller shouldCloseMainWindow]) {
-            return NO;
+    if (event != nil) {
+        if (event.type == NSEventTypeKeyDown) {
+            // Cmd + W
+            if (isCommandKey && event.keyCode == 13) {
+                [controller shouldCloseMainWindow];
+                return NO;
+            }
+        } else
+        if ((event.type != NSEventTypeLeftMouseUp) || event.window == nil) {
+            if (![controller shouldCloseMainWindow]) {
+                return NO;
+            }
         }
     }
     
