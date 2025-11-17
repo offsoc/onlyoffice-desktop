@@ -76,8 +76,7 @@
         if (event.type == NSEventTypeKeyDown) {
             // Cmd + W
             if (isCommandKey && event.keyCode == 13) {
-                [controller shouldCloseMainWindow];
-                return NO;
+                return [controller shouldCloseMainWindow];
             }
         } else
         if ((event.type != NSEventTypeLeftMouseUp) || event.window == nil) {
