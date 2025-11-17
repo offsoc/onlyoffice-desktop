@@ -46,7 +46,7 @@
 #import "NSCefData.h"
 
 @interface ASCEditorWindowController () <NSWindowDelegate>
-@property (nonatomic) BOOL waitingForSaveCompleteToClose;
+@property (nonatomic) BOOL waitingForClose;
 @end
 
 @implementation ASCEditorWindowController
@@ -64,6 +64,16 @@
     
     [super windowDidLoad];
     self.window.delegate = self;
+    
+    void (^addObserverFor)(_Nullable NSNotificationName, SEL) = ^(_Nullable NSNotificationName name, SEL selector) {
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:selector
+                                                     name:name
+                                                   object:nil];
+    };
+    
+    addObserverFor(CEFEventNameSave, @selector(onCEFSave:));
+    addObserverFor(CEFEventNameDocumentFragmentBuild, @selector(onCEFDocumentFragmentBuild:));
 }
 
 - (void)windowDidMove:(NSNotification *)notification {
@@ -85,7 +95,7 @@
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
-    if (self.waitingForSaveCompleteToClose)
+    if (self.waitingForClose)
         return NO;
     
     return [self shouldCloseWindow];
@@ -101,13 +111,19 @@
                                                                }];
     ASCEditorWindow *window = (ASCEditorWindow *)self.window;
     NSCefView *cefView = (NSCefView *)window.webView;
+    if (!cefView) {
+        return YES;
+    }
+    
     if ([cefView.data hasChanges]) {
         hasUnsaved = YES;
     }
     
     // Blockchain check
     if ([cefView checkCloudCryptoNeedBuild]) {
+        self.waitingForClose = YES;
         return NO;
+        
     } else {
         if ([cefView isSaveLocked]) {
             hasUnsaved = YES;
@@ -115,18 +131,6 @@
     }
     
     if (hasUnsaved) {
-        if (![self requestSaveChanges]) {
-            return NO;
-        }
-    }
-    return YES;
-}
-
-- (BOOL)requestSaveChanges {
-    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
-    NSCefView *cefView = (NSCefView *)window.webView;
-
-    if (cefView) {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
         [alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)];
@@ -141,7 +145,7 @@
             NSEditorApi::CAscMenuEvent * pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_SAVE);
             [cefView apply:pEvent];
             
-            self.waitingForSaveCompleteToClose = YES;
+            self.waitingForClose = YES;
             return NO;
 
         } else
@@ -155,6 +159,60 @@
         }
     }
     return YES;
+}
+
+- (BOOL)hasViewId:(NSString *)viewId {
+    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+    NSCefView *cefView = (NSCefView *)window.webView;
+    if (cefView) {
+        NSString *uuid = [NSString stringWithFormat:@"%ld", cefView.uuid];
+        if ([viewId isEqualToString:uuid])
+            return YES;
+    }
+    return NO;
+}
+
+#pragma mark -
+#pragma mark Notification handlers
+
+- (void)onWindowLoaded:(NSNotification *)notification {
+    if (notification && notification.object) {
+        
+        // Create CEF event listener
+        // [ASCEventsController sharedInstance];
+    }
+}
+
+#pragma mark -
+#pragma mark CEF events handlers
+
+- (void)onCEFSave:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        if ( ![params[@"cancel"] boolValue] ) {
+            NSString * viewId = params[@"viewId"];
+            if ([self hasViewId:viewId] && self.waitingForClose) {
+                self.window.releasedWhenClosed = YES;
+                [self.window close];
+            }
+        }
+    }
+}
+
+- (void)onCEFDocumentFragmentBuild:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+        
+        NSString * viewId = json[@"viewId"];
+        int error = [json[@"error"] intValue];
+                
+        if ([self hasViewId:viewId]) {
+            if (error == 0 && self.waitingForClose) {
+                self.window.releasedWhenClosed = YES;
+                [self.window close];
+            }
+        }
+    }
 }
 
 @end
