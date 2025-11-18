@@ -52,4 +52,6 @@
 - (void)openAcknowledgments;
 - (void)openEULA;
 - (void)openPreferences;
+
+@property (nonatomic) BOOL isTabRemoving;
 @end

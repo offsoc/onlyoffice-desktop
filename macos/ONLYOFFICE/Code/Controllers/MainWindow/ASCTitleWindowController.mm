@@ -65,24 +65,22 @@
                                                         object:self];
 }
 
+- (BOOL)onPerformClose {
+    ASCTitleWindow * window = (ASCTitleWindow *)self.window;
+    ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
+    if (controller.isTabRemoving)
+        return NO;
+
+    if (![controller shouldCloseMainWindow]) {
+        return NO;
+    }
+
+    return YES;
+}
+
 - (BOOL)windowShouldClose:(id)sender {
     ASCTitleWindow * window = (ASCTitleWindow *)self.window;
     ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
-    NSEvent * event = [window currentEvent];
-
-    BOOL isCommandKey = ([event modifierFlags] & NSCommandKeyMask) != 0;
-
-    if (event != nil) {
-        if (event.type == NSEventTypeKeyDown && isCommandKey && event.keyCode == 13) { // Cmd + W
-            return [controller shouldCloseMainWindow];
-            
-        } else
-        if ((event.type != NSEventTypeLeftMouseUp) || event.window == nil) {
-            if (![controller shouldCloseMainWindow]) {
-                return NO;
-            }
-        }
-    }
     
     return [controller shouldTerminateApplication];
 }

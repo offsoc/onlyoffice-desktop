@@ -688,10 +688,6 @@ static NSString * const kASCTabsMulticastDelegateKey = @"asctabsmulticastDelegat
         
         [self.tabs removeObject:tab];
         
-        if (_delegate && [_delegate respondsToSelector:@selector(tabs:didRemovedTab:)]) {
-            [_delegate tabs:self didRemovedTab:tab];
-        }
-        
         [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
             tab.animator.frame = CGRectOffset(tab.frame, 0, -CGRectGetHeight(self.scrollView.frame));
         } completionHandler:^{
@@ -729,6 +725,10 @@ static NSString * const kASCTabsMulticastDelegateKey = @"asctabsmulticastDelegat
                 }
 
                 [self selectTab:tabToSelect];
+            }
+            
+            if (_delegate && [_delegate respondsToSelector:@selector(tabs:didRemovedTab:)]) {
+                [_delegate tabs:self didRemovedTab:tab];
             }
         }];
     }

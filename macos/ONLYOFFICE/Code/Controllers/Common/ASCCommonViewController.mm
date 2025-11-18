@@ -1006,6 +1006,7 @@
                     }
                 }
             } else if ( keyCode == 87 ) { // W
+                // Handled in performClose
 //                if ( pData->get_IsCommandMac() ) {
 //                    ASCTabView * tab = [self.tabsControl selectedTab];
 //                    if ( tab and [self tabs:self.tabsControl willRemovedTab:tab] ) {
@@ -2107,10 +2108,14 @@
         }
         
         if (tab.changed || (cefView && [cefView isSaveLocked])) {
+            dispatch_async(dispatch_get_main_queue(), ^{
             [self requestSaveChangesForTab:tab];
+            });
             return NO;
         }
     }
+    
+    self.isTabRemoving = YES;
     return YES;
 }
 
@@ -2213,6 +2218,10 @@
 - (BOOL)tabView:(NSTabView *)tabView shouldSelectTabViewItem:(nullable NSTabViewItem *)tabViewItem {
     [self tabView:tabView dimTabViewItem:tabViewItem delay:0.1];
     return true;
+}
+
+- (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(nullable NSTabViewItem *)tabViewItem {
+    self.isTabRemoving = NO;
 }
 
 #pragma mark -
