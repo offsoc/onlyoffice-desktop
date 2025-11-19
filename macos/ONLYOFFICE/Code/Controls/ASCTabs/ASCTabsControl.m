@@ -688,9 +688,9 @@ static NSString * const kASCTabsMulticastDelegateKey = @"asctabsmulticastDelegat
         
         [self.tabs removeObject:tab];
         
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
+        //[NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
             tab.animator.frame = CGRectOffset(tab.frame, 0, -CGRectGetHeight(self.scrollView.frame));
-        } completionHandler:^{
+        //} completionHandler:^{
             [tab removeFromSuperview];
             
             if (_delegate && [_delegate respondsToSelector:@selector(tabs:didResize:)]) {
@@ -730,7 +730,7 @@ static NSString * const kASCTabsMulticastDelegateKey = @"asctabsmulticastDelegat
             if (_delegate && [_delegate respondsToSelector:@selector(tabs:didRemovedTab:)]) {
                 [_delegate tabs:self didRemovedTab:tab];
             }
-        }];
+        //}];
     }
 }
 

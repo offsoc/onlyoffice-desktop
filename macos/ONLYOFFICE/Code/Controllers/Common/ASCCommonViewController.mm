@@ -487,7 +487,7 @@
         if (result == NSAlertFirstButtonReturn) {
             // "Review Changes..." clicked
             self.shouldTerminateApp = YES;
-            
+            [self.tabsWithChanges removeAllObjects];
             NSArray * tabs = [NSArray arrayWithArray:self.tabsControl.tabs];
             for (ASCTabView * tab in tabs) {
                 if (tab.changed || [locked_uuids containsObject:tab.uuid]) {
@@ -714,7 +714,7 @@
 - (void)requestSaveChangesForTab:(ASCTabView *)tab {
     if (tab) {
         NSCefView * cefView = [self cefViewWithTab:tab];
-        if (tab.changed || (cefView && [cefView isSaveLocked])) {
+        if (tab.changed || (cefView && [cefView isSaveLocked])) {            
             NSAlert *alert = [[NSAlert alloc] init];
             [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
             [alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)];
@@ -724,6 +724,7 @@
             [alert setAlertStyle:NSAlertStyleWarning];
             
             [self.tabsControl selectTab:tab];
+            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.5, false);
             
             NSInteger returnCode = [alert runModalSheet];
             
@@ -745,11 +746,14 @@
 }
 
 - (void)safeCloseTabsWithChanges {
-    if ([[self tabsWithChanges] count] > 0) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self tabs:self.tabsControl willRemovedTab:[self.tabsWithChanges firstObject]];
-        });
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        for (ASCTabView *tab in [self tabsWithChanges]) {
+            [self tabs:self.tabsControl willRemovedTab:tab];
+            if (!self.shouldTerminateApp) {
+                break;
+            }
+        }
+    });
 }
 
 #pragma mark -
@@ -1403,7 +1407,7 @@
                     
                     if (result == NSAlertFirstButtonReturn) {
                         // "Review Changes..." clicked
-                        
+                        [self.tabsWithChanges removeAllObjects];
                         for (ASCTabView * tab in portalTabs) {
                             if (tab.changed || [saveLockedTabs containsObject:tab.uuid]) {
                                 [self.tabsWithChanges addObject:tab];
@@ -2108,9 +2112,9 @@
         }
         
         if (tab.changed || (cefView && [cefView isSaveLocked])) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-            [self requestSaveChangesForTab:tab];
-            });
+            //dispatch_async(dispatch_get_main_queue(), ^{
+                [self requestSaveChangesForTab:tab];
+            //});
             return NO;
         }
     }
@@ -2134,10 +2138,10 @@
     if ([self.tabsWithChanges containsObject:tab]) {
         [self.tabsWithChanges removeObject:tab];
     }
-    if (self.tabsWithChanges.count > 0) {
-        [self safeCloseTabsWithChanges];
-    }
-    
+//    if (self.tabsWithChanges.count > 0) {
+//        [self safeCloseTabsWithChanges];
+//    }
+
     if (self.shouldTerminateApp && self.tabsControl.tabs.count < 1) {
         [NSApp terminate:nil];
     }
