@@ -41,9 +41,12 @@
 #import "ASCEditorWindow.h"
 #import "AppDelegate.h"
 #import "ASCConstants.h"
+#import "AnalyticsHelper.h"
 #import "ASCHelper.h"
 #import "NSCefView.h"
 #import "NSCefData.h"
+#import "NSString+Extensions.h"
+#import "ASCSavePanelWithFormatController.h"
 
 @interface ASCEditorWindowController () <NSWindowDelegate>
 @property (nonatomic) BOOL waitingForClose;
@@ -72,7 +75,10 @@
                                                    object:nil];
     };
     
+    addObserverFor(CEFEventNameModifyChanged, @selector(onCEFModifyChanged:));
     addObserverFor(CEFEventNameSave, @selector(onCEFSave:));
+    addObserverFor(CEFEventNameStartSaveDialog, @selector(onCEFStartSave:));
+    addObserverFor(CEFEventNameSaveLocal, @selector(onCEFSaveLocalFile:));
     addObserverFor(CEFEventNameDocumentFragmentBuild, @selector(onCEFDocumentFragmentBuild:));
 }
 
@@ -172,6 +178,23 @@
     return NO;
 }
 
+- (NSCefData *)cefData {
+    ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+    NSCefView *cefView = (NSCefView *)window.webView;
+    if (cefView) {
+        return cefView.data;
+    }
+    return nil;
+}
+
+- (NSMutableDictionary *)params {
+    if (nil == _params) {
+        _params = [NSMutableDictionary dictionary];
+    }
+    
+    return _params;
+}
+
 #pragma mark -
 #pragma mark Notification handlers
 
@@ -186,15 +209,134 @@
 #pragma mark -
 #pragma mark CEF events handlers
 
+- (void)onCEFModifyChanged:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        NSString * viewId = params[@"viewId"];
+        BOOL changed = [params[@"сhanged"] boolValue];
+        if ([self hasViewId:viewId]) {
+            [self.cefData setChanged:changed];
+        }
+    }
+}
+
 - (void)onCEFSave:(NSNotification *)notification {
     if (notification && notification.userInfo) {
         NSDictionary * params = (NSDictionary *)notification.userInfo;
         if ( ![params[@"cancel"] boolValue] ) {
             NSString * viewId = params[@"viewId"];
             if ([self hasViewId:viewId] && self.waitingForClose) {
-                self.window.releasedWhenClosed = YES;
                 [self.window close];
             }
+        }
+    }
+}
+
+- (void)onCEFStartSave:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * fileName = notification.userInfo[@"fileName"];
+        NSNumber * idx      = notification.userInfo[@"idx"];
+        
+        /*NSSavePanel * savePanel = [NSSavePanel savePanel];
+        //        [savePanel setDirectoryURL:[NSURL URLWithString:[NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES) firstObject]]];
+        if (fileName && fileName.length > 0) {
+            [savePanel setAllowedFileTypes:@[fileName.pathExtension]];
+            [savePanel setNameFieldStringValue:[fileName lastPathComponent]];
+        }
+        
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+        
+        [savePanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [savePanel orderOut:self];
+            
+            if (result == NSFileHandlingPanelOKButton) {
+                appManager->EndSaveDialog([[[savePanel URL] path] stdwstring], [idx unsignedIntValue]);
+            } else {
+                appManager->EndSaveDialog(L"", [idx unsignedIntValue]);
+            }
+        }];*/
+    }
+}
+
+
+
+- (void)saveLocalFileWithParams:(NSDictionary *)params {
+    if (params) {
+        NSString * path         = params[@"path"];
+        NSString * viewId       = params[@"viewId"];
+        NSArray * formats       = params[@"supportedFormats"];
+                
+        //        __block NSInteger fileType = [params[@"fileType"] intValue];
+        
+        __block ASCSavePanelWithFormatController * saveController = [ASCSavePanelWithFormatController new];
+        
+        NSSavePanel * savePanel = [saveController savePanel];
+        
+        saveController.filters = formats;
+        saveController.original = params[@"original"];
+        //        saveController.filterType = fileType;
+        
+        if (!path || path.length < 1) {
+            path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+        }
+        
+        BOOL isDir;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir]) {
+            NSString * savedPath = [[NSUserDefaults standardUserDefaults] objectForKey:ASCUserLastSavePath];
+            
+            if (savedPath && savedPath.length > 0) {
+                path = [savedPath stringByAppendingPathComponent:path];
+            } else {
+                path = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject] stringByAppendingPathComponent:path];
+            }
+        }
+        
+        savePanel.directoryURL = [NSURL fileURLWithPath:[path stringByDeletingLastPathComponent]];
+        savePanel.canCreateDirectories = YES;
+        savePanel.nameFieldStringValue = [[path lastPathComponent] stringByDeletingPathExtension];
+        
+        [savePanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [savePanel orderOut:self];
+            
+            NSEditorApi::CAscLocalSaveFileDialog * saveData = new NSEditorApi::CAscLocalSaveFileDialog();
+            CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+            
+            if (result == NSFileHandlingPanelOKButton) {
+                [[NSUserDefaults standardUserDefaults] setObject:[[savePanel directoryURL] path] forKey:ASCUserLastSavePath];
+                [[NSUserDefaults standardUserDefaults] synchronize];
+                
+                NSString * path = [NSString stringWithFormat:@"%@", [[savePanel URL] path]];
+                
+                saveData->put_Path([path stdwstring]);
+                saveData->put_Id([viewId intValue]);
+                saveData->put_FileType((int)[saveController filterType]);
+            } else {
+                saveData->put_Id([viewId intValue]);
+                saveData->put_Path(L"");
+            }
+            
+            NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_LOCALFILE_SAVE_PATH);
+            pEvent->m_pData = saveData;
+            
+            appManager->Apply(pEvent);
+        }];
+    }
+}
+
+
+
+- (void)onCEFSaveLocalFile:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        NSString * viewId = params[@"viewId"];
+        if ([self hasViewId:viewId]) {
+            [self.params addEntriesFromDictionary:params];
+            [self saveLocalFileWithParams:params];
+            
+            [[AnalyticsHelper sharedInstance] recordCachedEventWithCategory:ASCAnalyticsCategoryApplication
+                                                                     action:@"Save local file"
+                                                                      label:nil
+                                                                      value:nil];
         }
     }
 }
@@ -208,7 +350,6 @@
                 
         if ([self hasViewId:viewId]) {
             if (error == 0 && self.waitingForClose) {
-                self.window.releasedWhenClosed = YES;
                 [self.window close];
             }
         }

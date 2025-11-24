@@ -41,4 +41,6 @@
 
 @interface ASCEditorWindowController : NSWindowController <NSWindowDelegate>
 + (instancetype)initWithFrame:(NSRect)frame;
+
+@property (nonatomic) NSMutableDictionary *params;
 @end

@@ -595,14 +595,11 @@
     return nil;
 }
 
-- (void)saveLocalFileWithTab:(ASCTabView *)tab {
-    if (tab) {
-        NSDictionary * params   = tab.params;
+- (void)saveLocalFileWithParams:(NSDictionary *)params {
+    if (params) {
         NSString * path         = params[@"path"];
         NSString * viewId       = params[@"viewId"];
         NSArray * formats       = params[@"supportedFormats"];
-        
-        [self.tabsControl selectTab:tab];
         
         //        __block NSInteger fileType = [params[@"fileType"] intValue];
         
@@ -871,7 +868,8 @@
         
         if (tab) {
             [tab.params addEntriesFromDictionary:params];
-            [self saveLocalFileWithTab:tab];
+            [self.tabsControl selectTab:tab];
+            [self saveLocalFileWithParams:tab.params];
             
             [[AnalyticsHelper sharedInstance] recordCachedEventWithCategory:ASCAnalyticsCategoryApplication
                                                                      action:@"Save local file"
@@ -1980,12 +1978,12 @@
         NSCefView * cefView = [[NSCefView alloc] initWithFrame:CGRectZero];
         
         ASCTabActionType action = (ASCTabActionType)[tab.params[@"action"] intValue];
+        CefViewWrapperType type = (action == ASCTabActionOpenPortal) ? cvwtSimple : cvwtEditor;
         
-        if (action == ASCTabActionOpenPortal) {
-            [cefView create:appManager withType:cvwtSimple];
-        } else {
-            [cefView create:appManager withType:cvwtEditor];
-        }
+        NSCefData *cefData = [[NSCefData alloc] initWith: tab.title viewType:type];
+        cefView.data = cefData;
+        
+        [cefView create:appManager withType:type];
         [cefView setBackgroundColor:[ASCThemesController currentThemeColor:windowBackgroundColor]];
         
         [self.view.window makeKeyAndOrderFront:nil];
