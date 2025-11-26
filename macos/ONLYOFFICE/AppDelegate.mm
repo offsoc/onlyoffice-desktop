@@ -40,6 +40,9 @@
 
 #import "AppDelegate.h"
 #import "ASCConstants.h"
+#import "ASCSavePanelWithFormatController.h"
+#import "ASCCertificatePreviewController.h"
+#import "ASCCertificateQLPreviewController.h"
 #import "ASCCommonViewController.h"
 #import "ASCEditorWindowController.h"
 #import "ASCEditorWindow.h"
@@ -51,6 +54,10 @@
 #import "ASCHelper.h"
 #import "AnalyticsHelper.h"
 #import "ASCExternalController.h"
+#import "ASCEditorJSVariables.h"
+#import "ASCThemesController.h"
+#import "NSString+Extensions.h"
+#import "NSDictionary+Extensions.h"
 
 #ifndef _MAS
     #import "PFMoveApplication.h"
@@ -76,6 +83,25 @@
     [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSDisabledCharacterPaletteMenuItem"];
     [[NSUserDefaults standardUserDefaults] synchronize];
     
+    
+    void (^addObserverFor)(_Nullable NSNotificationName, SEL) = ^(_Nullable NSNotificationName name, SEL selector) {
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:selector
+                                                     name:name
+                                                   object:nil];
+    };
+    
+    addObserverFor(ASCEventNameChangedUITheme, @selector(onUIThemeChanged:));
+    addObserverFor(ASCEventNameChangedSystemTheme, @selector(onSystemThemeChanged:));
+    addObserverFor(CEFEventNameStartSaveDialog, @selector(onCEFStartSave:));
+    addObserverFor(CEFEventNameSaveLocal, @selector(onCEFSaveLocalFile:));
+    addObserverFor(CEFEventNameOpenLocalFile, @selector(onCEFOnOpenLocalFile:));
+    addObserverFor(CEFEventNameEditorEvent, @selector(onCEFEditorEvent:));
+    addObserverFor(CEFEventNameOpenImage, @selector(onCEFOpenLocalImage:));
+    addObserverFor(CEFEventNameOpenFileDialog, @selector(onCEFOpenFileDialog:));
+    addObserverFor(CEFEventNameFileInFinder, @selector(onCEFFileInFinder:));
+    addObserverFor(CEFEventNameCertificatePreview, @selector(onCEFCertificatePreview:));
+    addObserverFor(CEFEventNameEditorDocumentReady, @selector(onCEFEditorDocumentReady:));
     
     // Google Analytics
     
@@ -484,6 +510,511 @@
     }
 
     return ptrmainwindow;
+}
+
+- (NSViewController *)topMostViewController {
+    NSWindow *keyWindow = [NSApp keyWindow];
+    if (!keyWindow) {
+        NSArray<NSWindow *> *windows = [NSApp windows];
+        if (windows.count == 0) {
+            return nil;
+        }
+        keyWindow = windows.firstObject;
+    }
+    if (keyWindow && keyWindow.contentViewController) {
+        return keyWindow.contentViewController;
+    }
+    return nil;
+}
+
+- (void)saveLocalFileWithParams:(NSDictionary *)params {
+    if (params) {
+        NSString * path         = params[@"path"];
+        NSString * viewId       = params[@"viewId"];
+        NSArray * formats       = params[@"supportedFormats"];
+                
+        //        __block NSInteger fileType = [params[@"fileType"] intValue];
+        
+        __block ASCSavePanelWithFormatController * saveController = [ASCSavePanelWithFormatController new];
+        
+        NSSavePanel * savePanel = [saveController savePanel];
+        
+        saveController.filters = formats;
+        saveController.original = params[@"original"];
+        //        saveController.filterType = fileType;
+        
+        if (!path || path.length < 1) {
+            path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+        }
+        
+        BOOL isDir;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDir]) {
+            NSString * savedPath = [[NSUserDefaults standardUserDefaults] objectForKey:ASCUserLastSavePath];
+            
+            if (savedPath && savedPath.length > 0) {
+                path = [savedPath stringByAppendingPathComponent:path];
+            } else {
+                path = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject] stringByAppendingPathComponent:path];
+            }
+        }
+        
+        savePanel.directoryURL = [NSURL fileURLWithPath:[path stringByDeletingLastPathComponent]];
+        savePanel.canCreateDirectories = YES;
+        savePanel.nameFieldStringValue = [[path lastPathComponent] stringByDeletingPathExtension];
+        
+        [savePanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [savePanel orderOut:self];
+            
+            NSEditorApi::CAscLocalSaveFileDialog * saveData = new NSEditorApi::CAscLocalSaveFileDialog();
+            CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+            
+            if (result == NSFileHandlingPanelOKButton) {
+                [[NSUserDefaults standardUserDefaults] setObject:[[savePanel directoryURL] path] forKey:ASCUserLastSavePath];
+                [[NSUserDefaults standardUserDefaults] synchronize];
+                
+                NSString * path = [NSString stringWithFormat:@"%@", [[savePanel URL] path]];
+                
+                saveData->put_Path([path stdwstring]);
+                saveData->put_Id([viewId intValue]);
+                saveData->put_FileType((int)[saveController filterType]);
+            } else {
+                saveData->put_Id([viewId intValue]);
+                saveData->put_Path(L"");
+            }
+            
+            NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_LOCALFILE_SAVE_PATH);
+            pEvent->m_pData = saveData;
+            
+            appManager->Apply(pEvent);
+        }];
+    }
+}
+
+#pragma mark -
+#pragma mark Notification handlers
+
+- (void)onSystemThemeChanged:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * info = (NSDictionary *)notification.userInfo;
+        NSString * mode = info[@"mode"];
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+        
+        NSMutableDictionary * json = [[NSMutableDictionary alloc] initWithDictionary: @{@"theme": @{@"system": mode}}];
+        std::wstring params = [[json jsonString] stdwstring];
+        
+        NSEditorApi::CAscExecCommandJS * pCommand = new NSEditorApi::CAscExecCommandJS;
+        pCommand->put_Command(L"renderervars:changed");
+        pCommand->put_Param(params);
+        
+        NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_EXECUTE_COMMAND_JS);
+        pEvent->m_pData = pCommand;
+        appManager->SetEventToAllMainWindows(pEvent);
+                
+        for (int uuid : appManager->GetViewsId()) {
+            CCefView * cef = appManager->GetViewById((int)uuid);
+            if (cef && cef->GetType() == cvwtEditor) {
+                pCommand = new NSEditorApi::CAscExecCommandJS;
+                pCommand->put_FrameName(L"frameEditor");
+                pCommand->put_Command(L"renderervars:changed");
+                pCommand->put_Param(params);
+                
+                pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_EXECUTE_COMMAND_JS);
+                pEvent->m_pData = pCommand;
+                cef->Apply(pEvent);
+            }
+        }
+        
+        [[ASCEditorJSVariables instance] setVariable:@"theme" withObject:@{@"id": [ASCThemesController currentThemeId],
+                                                                         @"type": [ASCThemesController isCurrentThemeDark] ? @"dark" : @"light",
+                                                                       @"system": mode}];
+        [[ASCEditorJSVariables instance] apply];
+    }
+}
+
+- (void)onUIThemeChanged:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        std::wstring wtheme = [params[@"uitheme"] stdwstring];
+        NSString * theme = params[@"uitheme"];
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+
+        NSEditorApi::CAscExecCommandJS * pCommand = new NSEditorApi::CAscExecCommandJS;
+        pCommand->put_Command(L"uitheme:changed");
+        pCommand->put_Param(wtheme);
+
+        NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_EXECUTE_COMMAND_JS);
+        pEvent->m_pData = pCommand;
+        appManager->SetEventToAllMainWindows(pEvent);
+
+        NSMutableDictionary * json = [[NSMutableDictionary alloc] initWithDictionary: @{@"theme": theme}];
+        appManager->UpdatePlugins([[json jsonString] stdwstring]);
+       
+        for (int uuid : appManager->GetViewsId()) {
+            CCefView * cef = appManager->GetViewById((int)uuid);
+            if (cef && cef->GetType() == cvwtEditor) {
+                pCommand = new NSEditorApi::CAscExecCommandJS;
+                pCommand->put_FrameName(L"frameEditor");
+                pCommand->put_Command(L"uitheme:changed");
+                pCommand->put_Param(wtheme);
+
+                pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_EXECUTE_COMMAND_JS);
+                pEvent->m_pData = pCommand;
+                cef->Apply(pEvent);
+            }
+        }
+
+        [[ASCEditorJSVariables instance] setParameter:@"uitheme" withString:theme];
+        [[ASCEditorJSVariables instance] applyParameters];
+    }
+}
+
+#pragma mark -
+#pragma mark CEF events handlers
+
+- (void)onCEFStartSave:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * fileName = notification.userInfo[@"fileName"];
+        NSNumber * idx      = notification.userInfo[@"idx"];
+        
+        NSSavePanel * savePanel = [NSSavePanel savePanel];
+        //        [savePanel setDirectoryURL:[NSURL URLWithString:[NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES) firstObject]]];
+        if (fileName && fileName.length > 0) {
+            [savePanel setAllowedFileTypes:@[fileName.pathExtension]];
+            [savePanel setNameFieldStringValue:[fileName lastPathComponent]];
+        }
+        
+        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+        
+        [savePanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [savePanel orderOut:self];
+            
+            if (result == NSFileHandlingPanelOKButton) {
+                appManager->EndSaveDialog([[[savePanel URL] path] stdwstring], [idx unsignedIntValue]);
+            } else {
+                appManager->EndSaveDialog(L"", [idx unsignedIntValue]);
+            }
+        }];
+    }
+}
+
+- (void)onCEFSaveLocalFile:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        NSString * viewId = params[@"viewId"];
+        
+        for (NSWindow *window in [NSApp windows]) {
+            if ([window isKindOfClass:[ASCTitleWindow class]]) {
+                ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
+                ASCTabView * tab = [controller.tabsControl tabWithUUID:viewId];
+                if (tab) {
+                    [tab.params addEntriesFromDictionary:params];
+                    [controller.tabsControl selectTab:tab];
+                    [self saveLocalFileWithParams:tab.params];
+                    
+                    [[AnalyticsHelper sharedInstance] recordCachedEventWithCategory:ASCAnalyticsCategoryApplication
+                                                                             action:@"Save local file"
+                                                                              label:nil
+                                                                              value:nil];
+                    break;
+                }
+
+            } else
+            if ([window isKindOfClass:[ASCEditorWindow class]]) {
+                ASCEditorWindow *editor = (ASCEditorWindow *)window;
+                ASCEditorWindowController *controller = (ASCEditorWindowController *)editor.windowController;
+                if (controller && [controller holdView:viewId]) {
+                    [controller.params addEntriesFromDictionary:params];
+                    [self saveLocalFileWithParams:params];
+                    
+                    [[AnalyticsHelper sharedInstance] recordCachedEventWithCategory:ASCAnalyticsCategoryApplication
+                                                                             action:@"Save local file"
+                                                                              label:nil
+                                                                              value:nil];
+                    break;
+                }
+            }
+        }
+    }
+}
+
+- (void)onCEFOnOpenLocalFile:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * directory = notification.userInfo[@"directory"];
+        
+        if (!directory || directory.length < 1) {
+            directory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+        }
+        
+        NSOpenPanel * openPanel = [NSOpenPanel openPanel];
+        NSMutableArray * filter = [NSMutableArray array];
+        [filter addObjectsFromArray:[ASCConstants documents]];
+        [filter addObjectsFromArray:[ASCConstants spreadsheets]];
+        [filter addObjectsFromArray:[ASCConstants presentations]];
+        [filter addObjectsFromArray:[ASCConstants draws]];
+        
+        openPanel.canChooseDirectories = NO;
+        openPanel.allowsMultipleSelection = NO;
+        openPanel.canChooseFiles = YES;
+        openPanel.allowedFileTypes = filter;
+        openPanel.directoryURL = [NSURL fileURLWithPath:directory];
+        
+        [openPanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [openPanel orderOut:self];
+            
+            if (result == NSFileHandlingPanelOKButton) {
+                [[NSNotificationCenter defaultCenter] postNotificationName:CEFEventNameCreateTab
+                                                                    object:nil
+                                                                  userInfo:@{
+                    @"action"  : @(ASCTabActionOpenLocalFile),
+                    @"path"    : [[openPanel URL] path],
+                    @"active"  : @(YES)
+                }];
+            }
+        }];
+    }
+}
+
+- (void)onCEFEditorEvent:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+        
+        NSString * viewId = json[@"viewId"];
+        NSDictionary * data = json[@"data"];
+        
+        if (viewId && data) {
+            NSString * action = data[@"action"];
+            
+            if ( action ) {
+                if ( [action isEqualToString:@"file:close"] ) {
+                    for (NSWindow *window in [NSApp windows]) {
+                        if ([window isKindOfClass:[ASCTitleWindow class]]) {
+                            ASCCommonViewController * controller = (ASCCommonViewController *)window.contentViewController;
+                            ASCTabView * tab = [controller.tabsControl tabWithUUID:viewId];
+                            if (tab) {
+                                [controller.tabsControl removeTab:tab selected:NO];
+                                break;
+                            }
+
+                        } else
+                        if ([window isKindOfClass:[ASCEditorWindow class]]) {
+                            ASCEditorWindow *editor = (ASCEditorWindow *)window;
+                            ASCEditorWindowController *controller = (ASCEditorWindowController *)editor.windowController;
+                            if (controller && [controller holdView:viewId]) {
+                                [editor close];
+                                break;
+                            }
+                        }
+                    }
+                    
+                } else
+                if ( [action isEqualToString:@"file:open"] ){
+                    NSNotification * notification = [NSNotification notificationWithName: CEFEventNameOpenLocalFile
+                                                                                  object: nil
+                                                                                userInfo: @{@"directory":@""}];
+                    [self onCEFOnOpenLocalFile: notification];
+                }
+            }
+        }
+    }
+}
+
+- (void)onCEFOpenLocalImage:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * directory = notification.userInfo[@"path"];
+        NSInteger fileId = [notification.userInfo[@"fileId"] intValue];
+
+        if (!directory || directory.length < 1) {
+            directory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+        }
+
+        NSOpenPanel * openPanel = [NSOpenPanel openPanel];
+
+        openPanel.canChooseDirectories = NO;
+        openPanel.allowsMultipleSelection = NO;
+        openPanel.canChooseFiles = YES;
+        openPanel.allowedFileTypes = [ASCConstants images];
+        openPanel.directoryURL = [NSURL fileURLWithPath:directory];
+
+        [openPanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [openPanel orderOut:self];
+
+            CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+
+            NSEditorApi::CAscLocalOpenFileDialog * imageInfo = new NSEditorApi::CAscLocalOpenFileDialog();
+            imageInfo->put_Id((int)fileId);
+
+            if (result == NSFileHandlingPanelOKButton) {
+                imageInfo->put_Path([[[openPanel URL] path] stdwstring]);
+            } else {
+                imageInfo->put_Path(L"");
+            }
+
+            NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_LOCALFILE_ADDIMAGE);
+            pEvent->m_pData = imageInfo;
+
+            appManager->Apply(pEvent);
+        }];
+    }
+}
+
+- (void)onCEFOpenFileDialog:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * directory = notification.userInfo[@"path"];
+        NSString * fileTypes = notification.userInfo[@"filter"];
+        NSInteger fileId = [notification.userInfo[@"fileId"] intValue];
+        BOOL isMulti = [notification.userInfo[@"isMulti"] boolValue];
+
+        if (!directory || directory.length < 1) {
+            directory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+        }
+
+        NSArray * allowedFileTypes = @[];
+
+        if ([fileTypes length] == 0) {
+            NSMutableArray * filter = [NSMutableArray array];
+            [filter addObjectsFromArray:[ASCConstants documents]];
+            [filter addObjectsFromArray:[ASCConstants spreadsheets]];
+            [filter addObjectsFromArray:[ASCConstants presentations]];
+            [filter addObjectsFromArray:[ASCConstants draws]];
+            [filter addObjectsFromArray:[ASCConstants csvtxt]];
+
+            allowedFileTypes = filter;
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterImage]) {
+            allowedFileTypes = [ASCConstants images];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterAudio]) {
+            allowedFileTypes = [ASCConstants audios];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterVideo]) {
+            allowedFileTypes = [ASCConstants videos];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterPlugin]) {
+            allowedFileTypes = [ASCConstants plugins];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterDocument]) {
+            allowedFileTypes = [ASCConstants documents];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterSpreadsheet]) {
+            allowedFileTypes = [ASCConstants spreadsheets];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterPresentation]) {
+            allowedFileTypes = [ASCConstants presentations];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterCsvTxt]) {
+            allowedFileTypes = [ASCConstants csvtxt];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterCrypto]) {
+            allowedFileTypes = [ASCConstants cancryptformats];
+        } else if ([fileTypes isEqualToString:CEFOpenFileFilterXML]) {
+            allowedFileTypes = [ASCConstants xmldata];
+        } else if ([fileTypes isEqualToString:@"any"] || [fileTypes isEqualToString:@"*.*"]) {
+            //            allowedFileTypes = @[@"*.*"];
+        } else {
+            // filters come in view "*.docx *.pptx *.xlsx"
+            NSError *error = nil;
+            NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"[\\(\\)\\*\\.]" options:NSRegularExpressionCaseInsensitive error:&error];
+            NSString * filters = [regex stringByReplacingMatchesInString:fileTypes options:0 range:NSMakeRange(0, [fileTypes length]) withTemplate:@""];
+            allowedFileTypes = [filters componentsSeparatedByString:@" "];
+        }
+
+        NSOpenPanel * openPanel = [NSOpenPanel openPanel];
+
+        openPanel.canChooseDirectories = NO;
+        openPanel.allowsMultipleSelection = NO;
+        openPanel.canChooseFiles = YES;
+        openPanel.directoryURL = [NSURL fileURLWithPath:directory];
+
+        if (allowedFileTypes.count > 0) {
+            openPanel.allowedFileTypes = allowedFileTypes;
+        }
+
+        [openPanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+            [openPanel orderOut:self];
+
+            CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+
+            NSEditorApi::CAscLocalOpenFileDialog * imageInfo = new NSEditorApi::CAscLocalOpenFileDialog();
+            imageInfo->put_Id((int)fileId);
+            imageInfo->put_Filter([fileTypes stdwstring]);
+
+            if (result == NSFileHandlingPanelOKButton) {
+                imageInfo->put_Path([[[openPanel URL] path] stdwstring]);
+            } else {
+                imageInfo->put_Path(L"");
+            }
+
+            if (isMulti) {
+                imageInfo->put_IsMultiselect(true);
+            }
+
+            NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_DOCUMENTEDITORS_OPENFILENAME_DIALOG);
+            pEvent->m_pData = imageInfo;
+
+            appManager->Apply(pEvent);
+        }];
+    }
+}
+
+- (void)onCEFFileInFinder:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSString * info = notification.userInfo[@"info"];
+        if (NSDictionary * json = [info dictionary]) {
+            NSURL * fileUrl = [NSURL fileURLWithPath:json[@"path"]];
+            [[NSWorkspace sharedWorkspace] activateFileViewerSelectingURLs:@[fileUrl]];
+        }
+    }
+}
+
+- (void)onCEFCertificatePreview:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+
+        NSString * text = json[@"text"];
+        NSString * path = json[@"path"];
+
+        if (path && path.length > 0) {
+            ASCCertificateQLPreviewController * controller = [ASCCertificateQLPreviewController new];
+            [controller previewBy:[NSURL fileURLWithPath:path]];
+        } else
+        if (text && text.length > 0) {
+            NSViewController* controller = [self topMostViewController];
+            ASCCertificatePreviewController * previewController = [[ASCCertificatePreviewController alloc] init:controller];
+            [previewController presentTextInfo:text];
+        }
+    }
+}
+
+- (void)onCEFEditorDocumentReady:(NSNotification *)notification {
+    //
+    if (notification && notification.userInfo) {
+        NSArray * printers = [NSPrinter printerNames];
+        
+        if ([printers count] != 0) {
+            NSMutableArray * arr = [NSMutableArray array];
+            
+            for (NSString * printerName in printers) {
+                [arr addObject:@{@"name": printerName}];
+            }
+            
+            id info = notification.userInfo;
+            if (NSString * viewId = info[@"viewId"]) {
+                CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+                
+                int cefViewId = [viewId intValue];
+                CCefView * cef = appManager->GetViewById(cefViewId);
+                if (cef && cef->GetType() == cvwtEditor) {
+                    NSString * def_printer_name = arr[0][@"name"];
+                    NSMutableDictionary * json = [[NSMutableDictionary alloc] initWithDictionary:
+                                                  @{
+                        @"current_printer": def_printer_name,
+                        @"printers": arr
+                    }];
+                    
+                    NSEditorApi::CAscExecCommandJS * pCommand = new NSEditorApi::CAscExecCommandJS;
+                    pCommand->put_FrameName(L"frameEditor");
+                    pCommand->put_Command(L"printer:config");
+                    pCommand->put_Param([[json jsonString] stdwstring]);
+                    
+                    NSEditorApi::CAscMenuEvent * pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_CEF_EXECUTE_COMMAND_JS);
+                    pEvent->m_pData = pCommand;
+                    
+                    cef->Apply(pEvent);
+                }
+            }
+        }
+    }
 }
 
 @end

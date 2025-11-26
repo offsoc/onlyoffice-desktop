@@ -40,6 +40,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "ASCTabView.h"
+#import "ASCTabsControl.h"
 #import "NSCefView.h"
 
 @interface ASCCommonViewController : NSViewController <NSTabViewDelegate>
@@ -52,4 +53,6 @@
 - (void)openAcknowledgments;
 - (void)openEULA;
 - (void)openPreferences;
+
+@property (weak) ASCTabsControl *tabsControl;
 @end
