@@ -75,7 +75,9 @@
     
     addObserverFor(CEFEventNameModifyChanged, @selector(onCEFModifyChanged:));
     addObserverFor(CEFEventNameSave, @selector(onCEFSave:));
+    addObserverFor(CEFEventNameEditorAppActionRequest, @selector(onCEFEditorAppActionRequest:));
     addObserverFor(CEFEventNameDocumentFragmentBuild, @selector(onCEFDocumentFragmentBuild:));
+    addObserverFor(CEFEventNameDocumentFragmented, @selector(onCEFDocumentFragmented:));
 }
 
 - (void)windowDidMove:(NSNotification *)notification {
@@ -226,6 +228,47 @@
         if ([self holdView:viewId]) {
             if (error == 0 && self.waitingForClose) {
                 [self.window close];
+            }
+        }
+    }
+}
+
+- (void)onCEFDocumentFragmented:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+
+        NSString * viewId = json[@"viewId"];
+        BOOL isFragmented = [json[@"isFragmented"] boolValue];
+
+        if ([self holdView:viewId]) {
+            if (isFragmented) {
+                ASCEditorWindow *window = (ASCEditorWindow *)self.window;
+                NSCefView *cefView = (NSCefView *)window.webView;
+                if (cefView) {
+                    NSEditorApi::CAscMenuEvent * pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_ENCRYPTED_CLOUD_BUILD);
+                    [cefView apply:pEvent];
+                    return;
+                }
+            }
+
+            [self.window close];
+        }
+    }
+}
+
+- (void)onCEFEditorAppActionRequest:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+
+        NSString * viewId = json[@"viewId"];
+        NSString * action = json[@"action"];
+        NSString * path = json[@"url"];
+
+        if (viewId && action) {
+            if ([self holdView:viewId]) {
+                if ([action isEqualToString:@"close"]) {
+                    [self.window close];
+                }
             }
         }
     }
