@@ -550,9 +550,9 @@ static float kASCRTLTabsRightMargin = 0;
 }
 
 - (void)tabs:(ASCTabsControl *)control didDetachTab:(ASCTabView *)tab atScreenPoint:(NSPoint)screenPoint withEvent:(NSEvent *)event {
-    NSView *webView = tab.webView;
-    if (!webView || ![webView isKindOfClass:[NSCefView class]]) {
-        NSLog(@"Warning: no WebView found in tab params, cannot detach");
+    NSCefView *webView = (NSCefView *)tab.webView;
+    if (!webView || ![webView.data isViewType:cvwtEditor]) {
+        NSLog(@"Warning: cannot detach WebView");
         return;
     }
     
@@ -565,10 +565,7 @@ static float kASCRTLTabsRightMargin = 0;
     [app.windowControllers addObject:windowController];
     
     ASCEditorWindow *editorWindow = (ASCEditorWindow *)windowController.window;
-
-    if (tab.title && tab.title.length > 0) {
-        [editorWindow setTitle:tab.title];
-    }
+    [editorWindow setTitle:@""];
     
     NSViewController *contentViewController = windowController.contentViewController;
     if (contentViewController && contentViewController.view) {
@@ -627,7 +624,7 @@ static float kASCRTLTabsRightMargin = 0;
     [webView removeFromSuperview];
     
     ASCTabView *tab = [[ASCTabView alloc] initWithFrame:CGRectZero];
-    tab.title       = window.title;
+    tab.title       = [webView.data title:NO];
     tab.type        = ASCTabViewTypeDocument;
     tab.webView = webView;
     tab.params = [NSMutableDictionary dictionary];
