@@ -122,7 +122,6 @@
     addObserverFor(CEFEventNamePortalSSO, @selector(onCEFPortalSSO:));
     addObserverFor(CEFEventNameFilesCheck, @selector(onCEFFilesCheck:));
     addObserverFor(CEFEventNameStartPageReady, @selector(onCEFStartPageReady:));
-    addObserverFor(CEFEventNameSaveBeforSign, @selector(onCEFSaveBeforeSign:));
     addObserverFor(CEFEventNameEditorAppReady, @selector(onCEFEditorAppReady:));
     addObserverFor(CEFEventNameEditorAppActionRequest, @selector(onCEFEditorAppActionRequest:));
     addObserverFor(CEFEventNameEditorOpenFolder, @selector(onCEFEditorOpenFolder:));
@@ -1161,36 +1160,6 @@
             });
         });
     }
-}
-
-- (void)onCEFSaveBeforeSign:(NSNotification *)notification {
-    ASCTabView * tab = [self.tabsControl selectedTab];
-    NSCefView * cefView = NULL;
-    
-    if (tab) {
-        cefView = [self cefViewWithTab:tab];
-    }
-    
-    if (NULL == cefView) {
-        return;
-    }
-    
-    NSAlert *alert = [NSAlert new];
-    [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
-    [[alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)] setKeyEquivalent:@"\e"];
-    [alert setMessageText:NSLocalizedString(@"Before signing the document, it must be saved.", nil)];
-    [alert setInformativeText:NSLocalizedString(@"Save the document?", nil)];
-    [alert setAlertStyle:NSAlertStyleWarning];
-    
-    NSInteger returnCode = [alert runModalSheet];
-    
-    NSEditorApi::CAscEditorSaveQuestion * pEventData = new NSEditorApi::CAscEditorSaveQuestion();
-    NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_DOCUMENTEDITORS_SAVE_YES_NO);
-    
-    pEventData->put_Value(returnCode == NSAlertFirstButtonReturn);
-    pEvent->m_pData = pEventData;
-    
-    [cefView apply:pEvent];
 }
 
 - (void)onCEFStartPageReady:(NSNotification *)notification {

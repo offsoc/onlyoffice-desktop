@@ -437,7 +437,9 @@ public:
                     case ASC_MENU_EVENT_TYPE_DOCUMENTEDITORS_SAVE_YES_NO: {
                         [[NSNotificationCenter defaultCenter] postNotificationName:CEFEventNameSaveBeforSign
                                                                             object:nil
-                                                                          userInfo:nil];
+                                                                          userInfo:@{
+                                                                                     @"viewId": [NSString stringWithFormat:@"%d", senderId]
+                                                                                     }];
                         break;
                     }
 

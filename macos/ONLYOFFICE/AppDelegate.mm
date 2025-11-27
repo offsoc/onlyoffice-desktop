@@ -56,6 +56,7 @@
 #import "ASCExternalController.h"
 #import "ASCEditorJSVariables.h"
 #import "ASCThemesController.h"
+#import "NSAlert+SynchronousSheet.h"
 #import "NSString+Extensions.h"
 #import "NSDictionary+Extensions.h"
 
@@ -103,6 +104,7 @@
     addObserverFor(CEFEventNameCertificatePreview, @selector(onCEFCertificatePreview:));
     addObserverFor(CEFEventNameEditorDocumentReady, @selector(onCEFEditorDocumentReady:));
     addObserverFor(CEFEventNameKeyboardDown, @selector(onCEFKeyDown:));
+    addObserverFor(CEFEventNameSaveBeforSign, @selector(onCEFSaveBeforeSign:));
     
     // Google Analytics
     
@@ -1086,6 +1088,38 @@
 //                if ( pData->get_IsCommandMac() ) {
 //                    [NSApp terminate:self];
 //                }
+            }
+        }
+    }
+}
+
+- (void)onCEFSaveBeforeSign:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        id json = notification.userInfo;
+        
+        NSString * viewId = json[@"viewId"];
+        if (viewId) {
+            CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
+            
+            int cefViewId = [viewId intValue];
+            CCefView * cef = appManager->GetViewById(cefViewId);
+            if (cef && cef->GetType() == cvwtEditor) {
+                NSAlert *alert = [NSAlert new];
+                [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
+                [[alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)] setKeyEquivalent:@"\e"];
+                [alert setMessageText:NSLocalizedString(@"Before signing the document, it must be saved.", nil)];
+                [alert setInformativeText:NSLocalizedString(@"Save the document?", nil)];
+                [alert setAlertStyle:NSAlertStyleWarning];
+
+                NSInteger returnCode = [alert runModalSheet];
+
+                NSEditorApi::CAscEditorSaveQuestion * pEventData = new NSEditorApi::CAscEditorSaveQuestion();
+                NSEditorApi::CAscMenuEvent* pEvent = new NSEditorApi::CAscMenuEvent(ASC_MENU_EVENT_TYPE_DOCUMENTEDITORS_SAVE_YES_NO);
+
+                pEventData->put_Value(returnCode == NSAlertFirstButtonReturn);
+                pEvent->m_pData = pEventData;
+
+                cef->Apply(pEvent);
             }
         }
     }
