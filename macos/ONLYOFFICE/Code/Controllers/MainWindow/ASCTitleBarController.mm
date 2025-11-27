@@ -636,7 +636,7 @@ static float kASCRTLTabsRightMargin = 0;
     [self.tabsControl addTab:tab selected:YES];
     
     window.webView = nil;
-    [window performClose:nil];
+    [window close];
     NSLog(@"Tab attached to main window");
 }
 
