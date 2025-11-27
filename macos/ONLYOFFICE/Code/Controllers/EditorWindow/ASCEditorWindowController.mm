@@ -74,6 +74,8 @@
     };
     
     addObserverFor(CEFEventNameModifyChanged, @selector(onCEFModifyChanged:));
+    addObserverFor(CEFEventNameTabEditorNameChanged, @selector(onCEFChangedTabEditorName:));
+    addObserverFor(CEFEventNameTabEditorType, @selector(onCEFChangedTabEditorType:));
     addObserverFor(CEFEventNameSave, @selector(onCEFSave:));
     addObserverFor(CEFEventNameEditorAppActionRequest, @selector(onCEFEditorAppActionRequest:));
     addObserverFor(CEFEventNameDocumentFragmentBuild, @selector(onCEFDocumentFragmentBuild:));
@@ -202,6 +204,36 @@
         BOOL changed = [params[@"сhanged"] boolValue];
         if ([self holdView:viewId]) {
             [self.cefData setChanged:changed];
+        }
+    }
+}
+
+- (void)onCEFChangedTabEditorType:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params   = (NSDictionary *)notification.userInfo;
+        NSString * viewId       = params[@"viewId"];
+        NSInteger type          = [params[@"type"] integerValue];
+        
+        if ([self holdView:viewId]) {
+            [self.cefData setContentType:AscEditorType(type)];
+        }
+    }
+}
+
+- (void)onCEFChangedTabEditorName:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params   = (NSDictionary *)notification.userInfo;
+        NSString * viewId       = params[@"viewId"];
+        NSString * name         = params[@"name"];
+        NSString * path         = params[@"path"];
+        
+        if ([self holdView:viewId]) {
+            [self.cefData setTitle:name];
+            [self.window setTitle:name];
+
+//            if ( !(path == nil) && !(path.length == 0) ) {
+//                tab.params[@"path"] = path;
+//            }
         }
     }
 }
