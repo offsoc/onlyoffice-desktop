@@ -113,7 +113,6 @@
     addObserverFor(CEFEventNameSave, @selector(onCEFSave:));
     addObserverFor(CEFEventNameOpenUrl, @selector(onCEFOpenUrl:));
     addObserverFor(CEFEventNameFullscreen, @selector(onCEFFullscreen:));
-    addObserverFor(CEFEventNameKeyboardDown, @selector(onCEFKeyDown:));
     addObserverFor(CEFEventNameDownload, @selector(onCEFDownload:));
     addObserverFor(CEFEventNamePrintDialog, @selector(onCEFOnBeforePrintEnd:));
     addObserverFor(CEFEventNamePortalLogin, @selector(onCEFPortalLogin:));
@@ -847,70 +846,6 @@
                         
                         [cefView apply:pEvent];
                     }
-                }
-            }
-        }
-    }
-}
-
-- (void)onCEFKeyDown:(NSNotification *)notification {
-    if (notification && notification.userInfo) {
-        NSDictionary * params = (NSDictionary *)notification.userInfo;
-        
-        NSValue * eventData = params[@"data"];
-        
-        //NSLog(@"ui oncefkeydown");
-        if (eventData) {
-            NSEditorApi::CAscKeyboardDown * pData = (NSEditorApi::CAscKeyboardDown *)[eventData pointerValue];
-            
-            int keyCode = pData->get_KeyCode();
-            if ( keyCode == 112 /*kVK_F1*/ && pData->get_IsShift() && pData->get_IsCtrl() ) {
-                NSOpenPanel * openPanel = [NSOpenPanel openPanel];
-                
-                openPanel.canChooseDirectories = YES;
-                openPanel.allowsMultipleSelection = NO;
-                openPanel.canChooseFiles = NO;
-                openPanel.allowedFileTypes = [ASCConstants images];
-                //                openPanel.directoryURL = [NSURL fileURLWithPath:directory];
-                
-                [openPanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
-                    [openPanel orderOut:self];
-                    
-                    if (result == NSFileHandlingPanelOKButton) {
-                        NSString * pathToHelp = [[[openPanel directoryURL] path] stringByAppendingString: @"/apps"];
-                        NSString * pathContents = [pathToHelp stringByAppendingString:@"/documenteditor/main/resources/help/en/Contents.json"];
-                        
-                        NSAlert * alert = [[NSAlert alloc] init];
-                        if ( [[NSFileManager defaultManager] fileExistsAtPath:pathContents] ) {
-                            [[NSUserDefaults standardUserDefaults] setValue:pathToHelp forKey:@"helpUrl"];
-                            [[ASCEditorJSVariables instance] setVariable:@"helpUrl" withString:pathToHelp];
-                            [[ASCEditorJSVariables instance] apply];
-                            
-                            [alert setMessageText:@"Successfully"];
-                        } else {
-                            [alert setMessageText:@"Failed"];
-                        }
-                        [alert runModal];
-                    }
-                }];
-            } else if ( keyCode == 9 ) {
-                if ( pData->get_IsCtrl() ) {
-                    if ( pData->get_IsShift() ) {
-                        [self.tabsControl selectPreviouseTab];
-                    } else {
-                        [self.tabsControl selectNextTab];
-                    }
-                }
-            } else if ( keyCode == 87 ) { // W
-                if ( pData->get_IsCommandMac() ) {
-                    ASCTabView * tab = [self.tabsControl selectedTab];
-                    if ( tab and [self tabs:self.tabsControl willRemovedTab:tab] ) {
-                        [self.tabsControl removeTab:tab];
-                    }
-                }
-            } else if ( keyCode == 81 ) { // Q
-                if ( pData->get_IsCommandMac() ) {
-                    [NSApp terminate:self];
                 }
             }
         }

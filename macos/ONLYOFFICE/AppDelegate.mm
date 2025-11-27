@@ -102,6 +102,7 @@
     addObserverFor(CEFEventNameFileInFinder, @selector(onCEFFileInFinder:));
     addObserverFor(CEFEventNameCertificatePreview, @selector(onCEFCertificatePreview:));
     addObserverFor(CEFEventNameEditorDocumentReady, @selector(onCEFEditorDocumentReady:));
+    addObserverFor(CEFEventNameKeyboardDown, @selector(onCEFKeyDown:));
     
     // Google Analytics
     
@@ -1012,6 +1013,79 @@
                     
                     cef->Apply(pEvent);
                 }
+            }
+        }
+    }
+}
+
+- (void)onCEFKeyDown:(NSNotification *)notification {
+    if (notification && notification.userInfo) {
+        NSDictionary * params = (NSDictionary *)notification.userInfo;
+        
+        NSValue * eventData = params[@"data"];
+        
+        //NSLog(@"ui oncefkeydown");
+        if (eventData) {
+            NSEditorApi::CAscKeyboardDown * pData = (NSEditorApi::CAscKeyboardDown *)[eventData pointerValue];
+            
+            int keyCode = pData->get_KeyCode();
+            if ( keyCode == 112 /*kVK_F1*/ && pData->get_IsShift() && pData->get_IsCtrl() ) {
+                NSOpenPanel * openPanel = [NSOpenPanel openPanel];
+                
+                openPanel.canChooseDirectories = YES;
+                openPanel.allowsMultipleSelection = NO;
+                openPanel.canChooseFiles = NO;
+                openPanel.allowedFileTypes = [ASCConstants images];
+                //                openPanel.directoryURL = [NSURL fileURLWithPath:directory];
+                
+                [openPanel beginSheetModalForWindow:[NSApp mainWindow] completionHandler:^(NSInteger result){
+                    [openPanel orderOut:self];
+                    
+                    if (result == NSFileHandlingPanelOKButton) {
+                        NSString * pathToHelp = [[[openPanel directoryURL] path] stringByAppendingString: @"/apps"];
+                        NSString * pathContents = [pathToHelp stringByAppendingString:@"/documenteditor/main/resources/help/en/Contents.json"];
+                        
+                        NSAlert * alert = [[NSAlert alloc] init];
+                        if ( [[NSFileManager defaultManager] fileExistsAtPath:pathContents] ) {
+                            [[NSUserDefaults standardUserDefaults] setValue:pathToHelp forKey:@"helpUrl"];
+                            [[ASCEditorJSVariables instance] setVariable:@"helpUrl" withString:pathToHelp];
+                            [[ASCEditorJSVariables instance] apply];
+                            
+                            [alert setMessageText:@"Successfully"];
+                        } else {
+                            [alert setMessageText:@"Failed"];
+                        }
+                        [alert runModal];
+                    }
+                }];
+            } else
+            if ( keyCode == 9 ) { // Tab
+                if ( pData->get_IsCtrl() ) {
+                    NSWindow *keyWindow = [NSApp keyWindow];
+                    if (keyWindow && [keyWindow isKindOfClass:[ASCTitleWindow class]]) {
+                        ASCCommonViewController * controller = (ASCCommonViewController *)keyWindow.contentViewController;
+                        if ( pData->get_IsShift() ) {
+                            [controller.tabsControl selectPreviouseTab];
+                        } else {
+                            [controller.tabsControl selectNextTab];
+                        }
+                    }
+                }
+            } else
+            if ( keyCode == 87 ) { // W
+                  // Processed at the event level
+//                if ( pData->get_IsCommandMac() ) {
+//                    ASCTabView * tab = [self.tabsControl selectedTab];
+//                    if ( tab and [self tabs:self.tabsControl willRemovedTab:tab] ) {
+//                        [self.tabsControl removeTab:tab];
+//                    }
+//                }
+            } else
+            if ( keyCode == 81 ) { // Q
+                  // Processed at the event level
+//                if ( pData->get_IsCommandMac() ) {
+//                    [NSApp terminate:self];
+//                }
             }
         }
     }
