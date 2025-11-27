@@ -431,11 +431,11 @@
     
     NSMutableArray * locked_uuids = [NSMutableArray array];
     for (ASCTabView * tab in self.tabsControl.tabs) {
-        if (tab.changed) {
-            unsaved++;
-        }
-        
         if (NSCefView * cefView = [self cefViewWithTab:tab]) {
+            if ([cefView.data hasChanges]) {
+                unsaved++;
+            }
+        
             // Blockchain check
             if ([cefView checkCloudCryptoNeedBuild]) {
                 self.shouldTerminateApp = YES;
@@ -469,7 +469,8 @@
             
             NSArray * tabs = [NSArray arrayWithArray:self.tabsControl.tabs];
             for (ASCTabView * tab in tabs) {
-                if (tab.changed || [locked_uuids containsObject:tab.uuid]) {
+                NSCefView * cefView = [self cefViewWithTab:tab];
+                if ((cefView && [cefView.data hasChanges]) || [locked_uuids containsObject:tab.uuid]) {
                     [self.tabsWithChanges addObject:tab];
                 } else {
                     [self.tabsControl removeTab:tab selected:NO];
@@ -627,7 +628,7 @@
 - (void)requestSaveChangesForTab:(ASCTabView *)tab {
     if (tab) {
         NSCefView * cefView = [self cefViewWithTab:tab];
-        if (tab.changed || (cefView && [cefView isSaveLocked])) {
+        if (cefView && ([cefView.data hasChanges] || [cefView isSaveLocked])) {
             NSAlert *alert = [[NSAlert alloc] init];
             [alert addButtonWithTitle:NSLocalizedString(@"Save", nil)];
             [alert addButtonWithTitle:NSLocalizedString(@"Don't Save", nil)];
@@ -1016,7 +1017,7 @@
                     } else {
                         [portalTabs addObject:tab];
                         
-                        if (tab.changed || (cefView && [cefView isSaveLocked])) {
+                        if (cefView && ([cefView.data hasChanges] || [cefView isSaveLocked])) {
                             unsaved++;
                             [saveLockedTabs addObject:tab.uuid];
                         }
@@ -1042,7 +1043,8 @@
                         // "Review Changes..." clicked
                         
                         for (ASCTabView * tab in portalTabs) {
-                            if (tab.changed || [saveLockedTabs containsObject:tab.uuid]) {
+                            NSCefView * cefView = [self cefViewWithTab:tab];
+                            if ((cefView && [cefView.data hasChanges]) || [saveLockedTabs containsObject:tab.uuid]) {
                                 [self.tabsWithChanges addObject:tab];
                             } else {
                                 [self.tabsControl removeTab:tab selected:NO];
@@ -1557,7 +1559,7 @@
             return NO;
         }
         
-        if (tab.changed || (cefView && [cefView isSaveLocked])) {
+        if (cefView && ([cefView.data hasChanges] || [cefView isSaveLocked])) {
             [self requestSaveChangesForTab:tab];
             return NO;
         }

@@ -347,6 +347,10 @@ static float kASCRTLTabsRightMargin = 0;
                 default:
                     break;
             }
+
+            if (NSCefView *cefView = (NSCefView *)tab.webView) {
+                [cefView.data setContentType:AscEditorType(type)];
+            }
             [tab setType:docType];
             [self.tabsControl updateTab:tab];
         }
@@ -362,6 +366,9 @@ static float kASCRTLTabsRightMargin = 0;
         ASCTabView * tab = [self.tabsControl tabWithUUID:viewId];
         
         if (tab) {
+            if (NSCefView *cefView = (NSCefView *)tab.webView) {
+                [cefView.data setTitle:name];
+            }
             [tab setTitle:name];
             [tab setToolTip:name];
 
@@ -382,9 +389,13 @@ static float kASCRTLTabsRightMargin = 0;
         ASCTabView * tab = [self.tabsControl tabWithUUID:viewId];
 
         if (tab) {
-            tab.changed = changed;
-
-            [self.tabsControl updateTab:tab];
+            if (NSCefView *cefView = (NSCefView *)tab.webView) {
+                [cefView.data setChanged:changed];
+                
+                [tab setTitle:[cefView.data title:NO]];
+                [self.tabsControl updateTab:tab];
+            }
+            
 //            if ([tab state] == NSControlStateValueOn) {
 //                [self.tabsControl reloadTab:tab];
 //            }
