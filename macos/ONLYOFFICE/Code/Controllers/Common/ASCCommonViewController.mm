@@ -41,7 +41,6 @@
 #import "ASCCommonViewController.h"
 #import "applicationmanager.h"
 #import "mac_application.h"
-#import "ascprinter.h"
 #import "ASCTabView.h"
 #import "ASCTitleWindowController.h"
 #import "ASCHelper.h"
@@ -73,7 +72,6 @@
 #define rootTabId @"1CEF624D-9FF3-432B-9967-61361B5BFE8B"
 
 @interface ASCCommonViewController() <ASCTabsControlDelegate, ASCTitleBarControllerDelegate, ASCUserInfoViewControllerDelegate> {
-    ASCPrinterContext * m_pContext;
     NSUInteger documentNameCounter;
     NSUInteger spreadsheetNameCounter;
     NSUInteger presentationNameCounter;
@@ -114,7 +112,6 @@
     addObserverFor(CEFEventNameOpenUrl, @selector(onCEFOpenUrl:));
     addObserverFor(CEFEventNameFullscreen, @selector(onCEFFullscreen:));
     addObserverFor(CEFEventNameDownload, @selector(onCEFDownload:));
-    addObserverFor(CEFEventNamePrintDialog, @selector(onCEFOnBeforePrintEnd:));
     addObserverFor(CEFEventNamePortalLogin, @selector(onCEFPortalLogin:));
     addObserverFor(CEFEventNamePortalLogout, @selector(onCEFPortalLogout:));
     addObserverFor(CEFEventNamePortalCreate, @selector(onCEFPortalCreate:));
@@ -885,39 +882,6 @@
             
             [[ASCDownloadController sharedInstance] updateDownload:idx data:eventData];
         }
-    }
-}
-
-- (void)printOperationDidRun:(NSPrintOperation *)printOperation success:(BOOL)success contextInfo:(void *)contextInfo {
-    if (m_pContext) {
-        m_pContext->EndPaint();
-        
-        m_pContext->Release();
-        m_pContext = nullptr;
-    }
-}
-
-- (void)onCEFOnBeforePrintEnd:(NSNotification *)notification {
-    if (notification && notification.userInfo) {
-        //        NSNumber * viewId       = notification.userInfo[@"viewId"];
-        //        NSNumber * pagesCount   = notification.userInfo[@"countPages"];
-        //        NSNumber * pagesCount   = notification.userInfo[@"currentPage"];
-        NSString * options      = notification.userInfo[@"options"];
-        
-        NSDictionary * nameLocales = [options dictionary];
-        NSLog(@"options: %@", nameLocales);
-        
-        CAscApplicationManager * appManager = [NSAscApplicationWorker getAppManager];
-        
-        // using synchronization to be sure that flag `ASCPrinterContext::isCurrentlyPrinting` is correctly handled
-        static dispatch_queue_t printQueue = dispatch_queue_create(NULL, NULL);
-        dispatch_sync(printQueue, ^{
-            if (appManager && !ASCPrinterContext::isCurrentlyPrinting) {
-                m_pContext = new ASCPrinterContext(appManager);
-                //            m_pContext->BeginPaint([viewId intValue], [pagesCount intValue], self, @selector(printOperationDidRun:success:contextInfo:));
-                m_pContext->BeginPaint(notification.userInfo, self, @selector(printOperationDidRun:success:contextInfo:));
-            }
-        });
     }
 }
 
